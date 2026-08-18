@@ -2,3 +2,11 @@
 # ------------------------------------------------------------------------------
 USE_DOCKER=yes
 IPYTHONDIR=/app/.ipython
+
+# Firebase
+# ------------------------------------------------------------------------------
+DJANGO_FIREBASE_WEB_API_KEY=AIzaSyBF9lI_r_shdm19BmpK_uwnSAj9XbfXkxQ
+# Optional: Path to Firebase Admin SDK service account key json file
+# DJANGO_FIREBASE_CREDENTIALS=/app/serviceAccountKey.json
+
+
