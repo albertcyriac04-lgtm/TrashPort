@@ -9,4 +9,14 @@ DJANGO_FIREBASE_WEB_API_KEY=AIzaSyBF9lI_r_shdm19BmpK_uwnSAj9XbfXkxQ
 # Optional: Path to Firebase Admin SDK service account key json file
 # DJANGO_FIREBASE_CREDENTIALS=/app/serviceAccountKey.json
 
-
+# Email / Google SMTP
+# ------------------------------------------------------------------------------
+DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+DJANGO_EMAIL_HOST=smtp.gmail.com
+DJANGO_EMAIL_PORT=587
+DJANGO_EMAIL_USE_TLS=True
+DJANGO_EMAIL_HOST_USER=albertcyriac443@gmail.com
+DJANGO_EMAIL_HOST_PASSWORD=fkcpyyrbrrezdgyo
+DJANGO_DEFAULT_FROM_EMAIL=TrashPort <albertcyriac443@gmail.com>
+DJANGO_SERVER_EMAIL=TrashPort <albertcyriac443@gmail.com>
+DJANGO_ACCOUNT_EMAIL_VERIFICATION=none
