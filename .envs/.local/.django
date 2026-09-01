@@ -2,6 +2,7 @@
 # ------------------------------------------------------------------------------
 USE_DOCKER=yes
 IPYTHONDIR=/app/.ipython
+REDIS_URL=redis://redis:6379
 
 # Firebase
 # ------------------------------------------------------------------------------
@@ -19,3 +20,10 @@ DJANGO_EMAIL_HOST_PASSWORD=fkcpyyrbrrezdgyo
 DJANGO_DEFAULT_FROM_EMAIL=TrashPort <albertcyriac443@gmail.com>
 DJANGO_SERVER_EMAIL=TrashPort <albertcyriac443@gmail.com>
 DJANGO_ACCOUNT_EMAIL_VERIFICATION=none
+
+# Chatbot / GROQ
+# ------------------------------------------------------------------------------
+GROQ_API_KEY=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
+CHATBOT_MODEL=groq/compound-mini
+CHATBOT_MAX_TOKENS=400
+CHATBOT_MAX_HISTORY=10
