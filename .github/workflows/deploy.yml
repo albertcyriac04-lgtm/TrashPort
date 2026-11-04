@@ -1,0 +1,75 @@
+name: Continuous Deployment to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ vars.EC2_HOST || secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER || vars.EC2_USER || 'ubuntu' }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            echo "🚀 Starting automated deployment on EC2..."
+
+            cd /home/ubuntu/TrashPort
+
+            # Ensure safe git directory
+            git config --global --add safe.directory /home/ubuntu/TrashPort
+
+            # Fetch and reset cleanly to origin/main to reconcile any divergent branch state
+            git config pull.rebase false
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Update email SMTP credentials and delivery settings in EC2 production .env
+            if [ -f .env ]; then
+              set_env_var() {
+                local key="$1"
+                local val="$2"
+                if grep -q "^${key}=" .env; then
+                  sed -i "s|^${key}=.*|${key}=${val}|" .env
+                else
+                  echo "${key}=${val}" >> .env
+                fi
+              }
+
+              set_env_var "DJANGO_EMAIL_BACKEND" "django.core.mail.backends.smtp.EmailBackend"
+              set_env_var "DJANGO_EMAIL_HOST" "smtp.gmail.com"
+              set_env_var "DJANGO_EMAIL_PORT" "465"
+              set_env_var "DJANGO_EMAIL_USE_SSL" "True"
+              set_env_var "DJANGO_EMAIL_USE_TLS" "False"
+              set_env_var "DJANGO_EMAIL_HOST_USER" "albertcyriac443@gmail.com"
+              set_env_var "DJANGO_EMAIL_HOST_PASSWORD" "jteustnqureuvptq"
+              set_env_var "DJANGO_DEFAULT_FROM_EMAIL" "TrashPort <albertcyriac443@gmail.com>"
+              set_env_var "DJANGO_SERVER_EMAIL" "TrashPort <albertcyriac443@gmail.com>"
+              echo "✅ Successfully updated production .env email credentials and Port 465 SSL configuration."
+            fi
+
+            # Rebuild and restart Docker containers in background
+            docker compose up -d --build
+            docker compose restart django
+
+            # Run database migrations and collect static files inside the container
+            docker compose exec -T django python manage.py migrate --noinput
+            docker compose exec -T django python manage.py collectstatic --noinput
+
+            # Seed cities, hubs, and vehicles
+            docker compose exec -T django python manage.py seed_cities_and_hubs || true
+
+            # Clean up dangling unused images to save disk space on EC2
+            docker image prune -f
+
+            echo "✅ Deployment completed successfully!"
