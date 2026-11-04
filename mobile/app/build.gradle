@@ -1,0 +1,24 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'shop.trashport.mobile'
+    compileSdk 35
+    useLibrary 'android.test.runner'
+    useLibrary 'android.test.base'
+    useLibrary 'android.test.mock'
+    defaultConfig {
+        applicationId 'shop.trashport.mobile'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    buildTypes { release { minifyEnabled false } }
+}
+tasks.register('policyTest', JavaExec) {
+    dependsOn 'compileDebugUnitTestJavaWithJavac'
+    classpath = files("$buildDir/intermediates/javac/debugUnitTest/compileDebugUnitTestJavaWithJavac/classes", "$buildDir/intermediates/javac/debug/compileDebugJavaWithJavac/classes")
+    mainClass = 'shop.trashport.mobile.UrlPolicyTest'
+}
+tasks.named('check').configure { dependsOn 'policyTest' }

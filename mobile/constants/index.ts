@@ -1,0 +1,56 @@
+export const API_BASE_URL = 'https://trashport.shop/api';
+
+export const STORAGE_KEYS = {
+  TOKEN: 'token',
+  USER: 'user',
+  REFRESH_TOKEN: 'refresh_token',
+};
+
+export const PICKUP_STATUS = {
+  REQUESTED: 'REQUESTED',
+  PENDING: 'PENDING',
+  AWAITING_PAYMENT: 'AWAITING_PAYMENT',
+  ASSIGNED: 'ASSIGNED',
+  IN_TRANSIT: 'IN_TRANSIT',
+  ON_ROUTE: 'ON_ROUTE',
+  PICKED_UP: 'PICKED_UP',
+  COMPLETED: 'COMPLETED',
+  HELD: 'HELD',
+  REJECTED: 'REJECTED',
+  CANCELLED: 'CANCELLED',
+};
+
+export const PICKUP_STATUS_COLORS: Record<string, string> = {
+  [PICKUP_STATUS.REQUESTED]: '#2196F3',
+  [PICKUP_STATUS.PENDING]: '#2196F3',
+  [PICKUP_STATUS.AWAITING_PAYMENT]: '#FF9800',
+  [PICKUP_STATUS.ASSIGNED]: '#FF9800',
+  [PICKUP_STATUS.IN_TRANSIT]: '#9C27B0',
+  [PICKUP_STATUS.ON_ROUTE]: '#9C27B0',
+  [PICKUP_STATUS.PICKED_UP]: '#4CAF50',
+  [PICKUP_STATUS.COMPLETED]: '#4CAF50',
+  [PICKUP_STATUS.HELD]: '#999',
+  [PICKUP_STATUS.REJECTED]: '#F44336',
+  [PICKUP_STATUS.CANCELLED]: '#F44336',
+};
+
+export const VERIFICATION_STATUS = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+};
+
+export const USER_ROLES = {
+  CITIZEN: 'CITIZEN',
+  COLLECTOR: 'COLLECTOR',
+  ADMIN: 'ADMIN',
+};
+
+export const VEHICLE_TYPES = [
+  'Truck',
+  'Van',
+  'Three-wheeler',
+  'Pickup',
+  'Mini Truck',
+  'Tempo',
+];
