@@ -1,0 +1,133 @@
+from .base import *  # noqa: F403
+from .base import INSTALLED_APPS
+from .base import MIDDLEWARE
+from .base import env
+
+# GENERAL
+# ------------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/dev/ref/settings/#debug
+DEBUG = True
+# https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
+SECRET_KEY = env(
+    "DJANGO_SECRET_KEY",
+    default="DSTnNUI41z2UIY4ZH107TfYMmeNCE0low80fgCTv7VNf04PPSF0o4WPYmuxKov94",
+)
+ALLOWED_HOSTS = env.list(
+    "DJANGO_ALLOWED_HOSTS",
+    default=["localhost", "0.0.0.0", "127.0.0.1", "trashport.shop", "www.trashport.shop"],
+)
+CSRF_TRUSTED_ORIGINS = list(
+    dict.fromkeys(
+        env.list(
+            "DJANGO_CSRF_TRUSTED_ORIGINS",
+            default=env.list("CSRF_TRUSTED_ORIGINS", default=[]),
+        )
+        + [
+            "http://localhost:8001",
+            "http://127.0.0.1:8001",
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+            "https://trashport.shop",
+            "https://www.trashport.shop",
+            "http://13.232.202.220",
+        ]
+    )
+)
+
+# CACHES
+# ------------------------------------------------------------------------------
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "trashport-local-cache",
+    }
+}
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+
+# EMAIL
+# ------------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+if env("DJANGO_EMAIL_HOST_USER", default="") and env("DJANGO_EMAIL_HOST_PASSWORD", default=""):
+    EMAIL_BACKEND = env(
+        "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
+    )
+else:
+    EMAIL_BACKEND = env(
+        "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+    )
+
+# WhiteNoise
+# ------------------------------------------------------------------------------
+# http://whitenoise.evans.io/en/latest/django.html#using-whitenoise-in-development
+INSTALLED_APPS = ["whitenoise.runserver_nostatic", *INSTALLED_APPS]
+
+
+# django-debug-toolbar (Opt-in to prevent high memory retention on low-end devices)
+# ------------------------------------------------------------------------------
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#prerequisites
+if env.bool("DJANGO_DEBUG_TOOLBAR", default=False):
+    INSTALLED_APPS += ["debug_toolbar"]
+    # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#middleware
+    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
+    # https://django-debug-toolbar.readthedocs.io/en/latest/configuration.html#debug-toolbar-config
+    DEBUG_TOOLBAR_CONFIG = {
+        "DISABLE_PANELS": [
+            "debug_toolbar.panels.redirects.RedirectsPanel",
+            # Disable profiling panel due to an issue with Python 3.12+:
+            # https://github.com/jazzband/django-debug-toolbar/issues/1875
+            "debug_toolbar.panels.profiling.ProfilingPanel",
+        ],
+        "SHOW_TEMPLATE_CONTEXT": False,
+        "SHOW_COLLAPSED": True,
+    }
+    # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
+    INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
+else:
+    INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
+if env("USE_DOCKER", default="no") == "yes":
+    import socket
+
+    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+    INTERNAL_IPS += [".".join([*ip.split(".")[:-1], "1"]) for ip in ips]
+    # RunServerPlus
+    # ------------------------------------------------------------------------------
+    # This is a custom setting for RunServerPlus to fix reloader issue in Windows docker environment
+    # Werkzeug reloader type [auto, watchdog, or stat]
+    RUNSERVERPLUS_POLLER_RELOADER_TYPE = 'stat'
+    # If you have CPU and IO load issues, you can increase this poller interval e.g) 5
+    RUNSERVERPLUS_POLLER_RELOADER_INTERVAL = 1
+
+# django-extensions
+# ------------------------------------------------------------------------------
+# https://django-extensions.readthedocs.io/en/latest/installation_instructions.html#configuration
+INSTALLED_APPS += ["django_extensions"]
+
+# Your stuff...
+# Database Configuration
+# Uses PostgreSQL container as primary production-grade database
+if "DATABASE_URL" in env or os.getenv("DATABASE_URL", default=None):
+    DATABASES = {"default": env.db("DATABASE_URL")}
+    DATABASES["default"]["ATOMIC_REQUESTS"] = True
+    DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env.str("POSTGRES_DB", default="trashport"),
+            "USER": env.str("POSTGRES_USER", default="debug"),
+            "PASSWORD": env.str("POSTGRES_PASSWORD", default="debug"),
+            "HOST": env.str("POSTGRES_HOST", default="127.0.0.1"),
+            "PORT": env.str("POSTGRES_PORT", default="5432"),
+            "ATOMIC_REQUESTS": True,
+        }
+    }
+
+
+
+
+# In-memory channel layer for local development to prevent Redis asyncio timeout disconnects
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    }
+}
