@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+
+{% block title %}Pickup Request Details | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-10 col-lg-9">
+
+    <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
+      <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+    </a>
+
+    <!-- Navigation & GPS Broadcaster Card -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-3">
+          <div>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+              <h4 class="mb-0 text-success fw-bold"><i class="fas fa-satellite me-2"></i>Pickup Navigation &amp; Live Location</h4>
+              <span id="colDetailAccuracyBadge" class="badge bg-success-subtle text-success border border-success-subtle d-none">
+                <i class="fas fa-satellite-dish me-1"></i> <span id="colDetailAccuracyText">GPS: Accurate</span>
+              </span>
+            </div>
+            <span class="text-muted small">Use layer control (top-right) to toggle 🛰️ Satellite / 🗺️ Street view.</span>
+          </div>
+          <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2">
+            <button id="btnLocateCollector" class="btn btn-sm btn-success text-white fw-semibold shadow-sm" title="Center map to my accurate live location">
+              <i class="fas fa-crosshairs me-1"></i> <span id="btnLocateText">My Live Location</span>
+            </button>
+            <button id="broadcastGpsBtn" class="btn btn-sm btn-outline-success fw-semibold shadow-sm">
+              <i class="fas fa-broadcast-tower me-1"></i> <span id="gpsStatusText">Enable Live GPS</span>
+            </button>
+            <button id="simDriveBtn" class="btn btn-sm btn-primary shadow-sm fw-semibold">
+              <i class="fas fa-play me-1"></i> Simulate Driving
+            </button>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border-radius: 12px;">
+              <div class="small text-white-50 text-uppercase fw-bold">Live Distance to User</div>
+              <div class="fs-3 fw-bold mt-1" id="colHudDistance">{{ pickup.distance_km }} km</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #0f2027 0%, #2c5364 100%); border-radius: 12px;">
+              <div class="small text-white-50 text-uppercase fw-bold">Estimated Travel Time</div>
+              <div class="fs-3 fw-bold mt-1" id="colHudEta">Calculating...</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="collectorMap" class="shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;"></div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 border-bottom pb-3">
+          <div>
+            <h2 class="mb-1 text-success fw-bold">Pickup Request #{{ pickup.id }}</h2>
+            <span class="fs-6 text-muted">Booked on {{ pickup.created_at|date:"M d, Y" }} | Base Distance: <strong>{{ pickup.distance_km }} km</strong></span>
+          </div>
+          <div class="mt-2 mt-md-0">
+            {% if pickup.status == 'AWAITING_PAYMENT' %}
+              <span class="badge bg-danger p-2 fs-6">Awaiting Payment</span>
+            {% elif pickup.status == 'PENDING' %}
+              <span class="badge bg-warning text-dark p-2 fs-6">Pending Assignment</span>
+            {% elif pickup.status == 'ASSIGNED' %}
+              <span class="badge bg-primary p-2 fs-6">Assigned</span>
+            {% elif pickup.status == 'IN_TRANSIT' %}
+              <span class="badge bg-info p-2 fs-6">In Transit</span>
+            {% elif pickup.status == 'COMPLETED' %}
+              <span class="badge bg-success p-2 fs-6"><i class="fas fa-check-circle me-1"></i> Completed</span>
+            {% elif pickup.status == 'CANCELLED' %}
+              <span class="badge bg-danger p-2 fs-6">Cancelled</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6 border-end">
+            <h5 class="text-uppercase text-muted small fw-bold mb-3">Collection Specifications</h5>
+            <p class="mb-2"><strong>Waste Category:</strong> <span class="badge bg-light text-dark border">{{ pickup.category.name }}</span></p>
+            <p class="mb-2"><strong>Category Base Rate:</strong> Rs. {{ pickup.category.fee_per_kg }}/kg (Reward: {{ pickup.category.points_per_kg }} pts/kg)</p>
+            <p class="mb-2"><strong>Estimated Weight (Customer):</strong> <span class="badge bg-secondary">{{ pickup.weight_kg }} kg</span></p>
+
+            {% if pickup.is_weight_verified %}
+              <div class="p-3 bg-success-subtle border border-success-subtle rounded-3 my-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold text-success"><i class="fas fa-balance-scale me-1"></i> Verified Actual Weight:</span>
+                  <span class="fs-5 fw-bold text-success">{{ pickup.actual_weight_kg }} kg</span>
+                </div>
+                {% if pickup.extra_fee > 0 %}
+                  <div class="text-danger small mt-1">
+                    <i class="fas fa-exclamation-triangle me-1"></i> Extra Weight Surcharge (2x rate): <strong>+Rs. {{ pickup.extra_fee }}</strong>
+                  </div>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            <p class="mb-2"><strong>Number of Package Boxes:</strong> {{ pickup.quantity_estimate|default:"Standard" }}</p>
+            <p class="mb-2"><strong>Scheduled Slot:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
+            <hr>
+            <p class="mb-2"><strong>Total Customer Fee:</strong> <span class="fs-5 fw-bold text-dark">Rs. {{ pickup.fee }}</span></p>
+            <p class="mb-2"><strong>Collector Earning Payout:</strong>
+              <span class="fs-5 fw-bold text-success">
+                Rs. {{ pickup.collector_earnings|default:preview_earnings }}
+              </span>
+              <small class="text-muted d-block">(Formula: Rs. {{ payout_settings.base_min_payout|default:"25.00" }} base min + Rs. {{ payout_settings.rate_per_km|default:"2.00" }}/km for {{ pickup.distance_km }} km + {{ payout_settings.extra_weight_commission_percent|default:"20.00" }}% commission on extra weight)</small>
+            </p>
+          </div>
+
+          <div class="col-md-6">
+            <h5 class="text-uppercase text-muted small fw-bold mb-3">Location & Customer</h5>
+            <p class="mb-2"><strong>Customer:</strong> {{ pickup.citizen.name|default:pickup.citizen.email }}</p>
+            <p class="mb-2"><strong>Customer Email:</strong> {{ pickup.citizen.email }}</p>
+            <p class="mb-2"><strong>Pickup Address:</strong><br>
+              {{ pickup.address.address_line1 }}<br>
+              {% if pickup.address.address_line2 %}{{ pickup.address.address_line2 }}<br>{% endif %}
+              {{ pickup.address.city }}, {{ pickup.address.state }} - {{ pickup.address.postal_code }}
+            </p>
+            <hr>
+            <p class="mb-0"><strong>Assigned Collector:</strong><br>
+              {% if pickup.collector %}
+                <span class="fw-bold text-primary">{{ pickup.collector.name|default:pickup.collector.email }}</span> ({{ pickup.collector.email }})
+              {% else %}
+                <span class="text-muted italic">Waiting for collector assignment</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Collector Actions & Waste Verification Section -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <h5 class="card-title fw-bold text-dark mb-3">Collector Action Panel</h5>
+
+        {% if pickup.status == 'PENDING' %}
+          <p class="text-muted small">This job is pending. Claim it to assign it to yourself.</p>
+          {% if not is_within_collector_range %}
+            <div class="alert alert-danger py-2 px-3 small mb-0 d-inline-flex align-items-center gap-2">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>This pickup is {{ distance_from_collector_km|floatformat:1 }} km away, exceeding your 25 km collection range limit. You cannot claim this job.</span>
+            </div>
+          {% elif is_verified %}
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="claim">
+              <button type="submit" class="btn btn-success px-4 py-2 fw-bold">
+                <i class="fas fa-hand-pointer me-1"></i> Claim Pickup Job
+              </button>
+            </form>
+          {% else %}
+            <div class="alert alert-warning py-2 px-3 small mb-0 d-inline-flex align-items-center gap-2">
+              <i class="fas fa-lock"></i>
+              <span>Account pending administrator verification. You cannot claim jobs until verified.</span>
+            </div>
+          {% endif %}
+
+        {% elif pickup.status == 'ASSIGNED' and pickup.collector == request.user %}
+          <p class="text-muted small">Update status when you begin transit to customer location.</p>
+          <div class="d-flex gap-2">
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="transit">
+              <button type="submit" class="btn btn-warning text-dark fw-bold px-3">
+                <i class="fas fa-truck me-1"></i> Start Transit
+              </button>
+            </form>
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="cancel">
+              <button type="submit" class="btn btn-outline-danger">
+                Release Job
+              </button>
+            </form>
+          </div>
+
+        {% elif pickup.status == 'IN_TRANSIT' and pickup.collector == request.user %}
+          <!-- Waste Weight Verification & 2x Surcharge Form -->
+          <div class="p-3 bg-light rounded-3 border">
+            <h6 class="fw-bold text-dark mb-1">
+              <i class="fas fa-balance-scale text-success me-1"></i> Step 2: Measure & Verify Waste Weight
+            </h6>
+            <p class="text-muted small mb-3">
+              Measure the actual waste weight on-site. If actual weight exceeds customer's estimated weight (<strong>{{ pickup.weight_kg }} kg</strong>), additional surcharge is automatically calculated at <strong>2x the category rate</strong> (Rs. {{ pickup.category.fee_per_kg|floatformat:2 }} × 2 = Rs. {% widthratio pickup.category.fee_per_kg 1 2 %}/kg for extra kg). As a collector, you earn <strong>Rs. 25 min base + Rs. 2.00/km + 20% commission of the extra weight charge</strong>!
+            </p>
+
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" id="verificationForm">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="complete">
+
+              <div class="row g-3 align-items-end mb-3">
+                <div class="col-md-5">
+                  <label class="form-label fw-bold small text-dark">Measured Actual Weight (kg):</label>
+                  <div class="input-group">
+                    <input type="number" step="0.01" min="0.1" name="actual_weight_kg" id="actualWeightInput"
+                           class="form-control form-control-lg fw-bold text-success"
+                           value="{{ pickup.weight_kg }}" required>
+                    <span class="input-group-text fw-bold">kg</span>
+                  </div>
+                </div>
+                <div class="col-md-7">
+                  <div class="p-2 bg-white rounded border small">
+                    <div>Estimated: <strong>{{ pickup.weight_kg }} kg</strong> | Base Distance: <strong>{{ pickup.distance_km }} km</strong></div>
+                    <div id="extraWeightNotice" class="text-muted">No excess weight.</div>
+                    <div id="earningCalcNotice" class="fw-bold text-success mt-1">
+                      Estimated Collector Earning: Rs. {{ preview_earnings }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-success btn-lg px-4 fw-bold shadow-sm">
+                <i class="fas fa-check-circle me-1"></i> Verify Weight &amp; Complete Collection
+              </button>
+            </form>
+
+            <script>
+              document.addEventListener("DOMContentLoaded", function() {
+                const wtInput = document.getElementById("actualWeightInput");
+                const notice = document.getElementById("extraWeightNotice");
+                const earnNotice = document.getElementById("earningCalcNotice");
+                if (wtInput && notice && earnNotice) {
+                  const estWeight = parseFloat("{{ pickup.weight_kg }}") || 0;
+                  const feePerKg = parseFloat("{{ pickup.category.fee_per_kg }}") || 0;
+                  const distKm = parseFloat("{{ pickup.distance_km }}") || 0;
+
+                  function updatePreview() {
+                    const actualWt = parseFloat(wtInput.value) || estWeight;
+                    const baseMin = parseFloat("{{ payout_settings.base_min_payout|default:'25.00' }}") || 25.0;
+                    const rateKm = parseFloat("{{ payout_settings.rate_per_km|default:'2.00' }}") || 2.0;
+                    const commPct = (parseFloat("{{ payout_settings.extra_weight_commission_percent|default:'20.00' }}") || 20.0) / 100.0;
+                    const commDisplay = parseFloat("{{ payout_settings.extra_weight_commission_percent|default:'20.00' }}") || 20.0;
+
+                    const distPart = distKm * rateKm;
+                    let extraWeight = Math.max(0, actualWt - estWeight);
+                    let extraFee = extraWeight * feePerKg * 2.0;
+                    let extraComm = extraFee * commPct;
+                    let totalEarn = Math.max(baseMin, baseMin + distPart + extraComm);
+
+                    if (extraWeight > 0) {
+                      notice.innerHTML = `<span class="text-danger fw-bold">+${extraWeight.toFixed(2)} kg excess weight detected!</span> 2x Surcharge: <strong>+Rs. ${extraFee.toFixed(2)}</strong> (Collector gets ${commDisplay}% commission: +Rs. ${extraComm.toFixed(2)})`;
+                    } else {
+                      notice.innerHTML = '<span class="text-muted">No excess weight. Standard base rate applies.</span>';
+                    }
+                    earnNotice.innerHTML = `Estimated Collector Earning: <span class="text-success fw-bold">Rs. ${totalEarn.toFixed(2)}</span> <small class="text-muted">(Rs. ${baseMin.toFixed(2)} base + Rs. ${distPart.toFixed(2)} distance${extraComm > 0 ? ' + Rs. ' + extraComm.toFixed(2) + ' extra wt commission' : ''})</small>`;
+                  }
+
+                  wtInput.addEventListener("input", updatePreview);
+                  updatePreview();
+                }
+              });
+            </script>
+          </div>
+
+        {% else %}
+          <p class="text-muted mb-0 small">Job status is: <strong>{{ pickup.status }}</strong></p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block inline_javascript %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Fix default Leaflet icon CDN URLs
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      const pickupId = "{{ pickup.id }}";
+      const pickupLat = parseFloat("{{ pickup.effective_latitude|stringformat:".6f" }}");
+      const pickupLng = parseFloat("{{ pickup.effective_longitude|stringformat:".6f" }}");
+
+      // Default fallback: ~2 km offset from pickup (replaced immediately when live GPS resolves)
+      let currentColLat = pickupLat - 0.015;
+      let currentColLng = pickupLng - 0.015;
+
+      let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
+      });
+
+      let baseMaps = {
+        "📍 Street Map (OSM)": streetLayer,
+        "🛰️ Satellite View": satelliteLayer
+      };
+
+      let map = L.map('collectorMap', {
+        center: [pickupLat, pickupLng],
+        zoom: 14,
+        layers: [streetLayer]
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      // User Pickup Marker
+      let userMarker = L.marker([pickupLat, pickupLng]).addTo(map)
+        .bindPopup("<b>📍 User Pickup Spot</b><br>{{ pickup.address.address_line1 }}").openPopup();
+
+      // Collector Vehicle Marker
+      let colMarker = L.marker([currentColLat, currentColLng]).addTo(map)
+        .bindPopup("<b>🚚 Your Location (Collector)</b>");
+
+      let liveAccuracyCircle = null;
+
+      // In-map Floating Locate Button
+      const LocateControl = L.Control.extend({
+        options: { position: 'topleft' },
+        onAdd: function () {
+          const container = L.DomUtil.create('div', 'leaflet-bar');
+          const link = L.DomUtil.create('a', 'leaflet-control-locate-btn', container);
+          link.innerHTML = '<i class="fas fa-crosshairs" style="color:#198754; font-size:15px; display:flex; align-items:center; justify-content:center; width:34px; height:34px; background:white; cursor:pointer;"></i>';
+          link.title = 'Center to My Live GPS Location';
+          link.href = '#';
+          link.role = 'button';
+          L.DomEvent.disableClickPropagation(container);
+          L.DomEvent.on(link, 'click', function (e) {
+            L.DomEvent.preventDefault(e);
+            locateCollectorLive(true);
+          });
+          return container;
+        }
+      });
+      map.addControl(new LocateControl());
+
+      let roadWaypoints = [];
+
+      function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
+        let pts = [];
+        let dLat = eLat - sLat;
+        let dLng = eLng - sLng;
+        let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
+        let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
+        let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
+        let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
+        let count = 16;
+        for (let i = 0; i <= count; i++) {
+          let t = i / count;
+          let lat, lng;
+          if (t < 0.5) {
+            let subT = t * 2.0;
+            lat = (1 - subT) * sLat + subT * turn1Lat;
+            lng = (1 - subT) * sLng + subT * turn1Lng;
+          } else if (t < 0.85) {
+            let subT = (t - 0.5) / 0.35;
+            lat = (1 - subT) * turn1Lat + subT * turn2Lat;
+            lng = (1 - subT) * turn1Lng + subT * turn2Lng;
+          } else {
+            let subT = (t - 0.85) / 0.15;
+            lat = (1 - subT) * turn2Lat + subT * eLat;
+            lng = (1 - subT) * turn2Lng + subT * eLng;
+          }
+          let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
+          let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
+          pts.push([lat + wLat, lng + wLng]);
+        }
+        return pts;
+      }
+
+      roadWaypoints = generateClientRoadCurve(currentColLat, currentColLng, pickupLat, pickupLng);
+
+      let routePolyline = L.polyline(roadWaypoints, {
+        color: '#16a34a',
+        weight: 6,
+        opacity: 0.85
+      }).addTo(map);
+
+      function fetchRoadRoute(startLat, startLng) {
+        fetch(`/api/maps/route/?start_lat=${startLat}&start_lng=${startLng}&end_lat=${pickupLat}&end_lng=${pickupLng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.coordinates && data.coordinates.length > 2) {
+              roadWaypoints = data.coordinates;
+            } else {
+              roadWaypoints = generateClientRoadCurve(startLat, startLng, pickupLat, pickupLng);
+            }
+            routePolyline.setLatLngs(roadWaypoints);
+            if (data && data.distance_km) {
+              document.getElementById('colHudDistance').textContent = `${data.distance_km} km`;
+            }
+            if (data && data.duration_mins) {
+              document.getElementById('colHudEta').textContent = `${data.duration_mins} mins`;
+            }
+          })
+          .catch(err => {
+            roadWaypoints = generateClientRoadCurve(startLat, startLng, pickupLat, pickupLng);
+            routePolyline.setLatLngs(roadWaypoints);
+          });
+      }
+
+      function updateMapAndHUD(lat, lng, accuracy = 10) {
+        currentColLat = lat;
+        currentColLng = lng;
+        colMarker.setLatLng([lat, lng]);
+
+        if (liveAccuracyCircle) {
+          liveAccuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+        } else {
+          liveAccuracyCircle = L.circle([lat, lng], {
+            radius: accuracy,
+            color: '#16a34a',
+            fillColor: '#22c55e',
+            fillOpacity: 0.15,
+            weight: 1.5
+          }).addTo(map);
+        }
+
+        // Send to Backend API
+        fetch('/api/maps/locations/update/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({
+            latitude: lat,
+            longitude: lng,
+            speed: 25.0,
+            heading: 0.0,
+            accuracy: accuracy
+          })
+        }).catch(err => console.log("Location update error:", err));
+      }
+
+      function locateCollectorLive(flyTo = true, silent = false) {
+        const btn = document.getElementById('btnLocateCollector');
+        const btnText = document.getElementById('btnLocateText');
+        const badge = document.getElementById('colDetailAccuracyBadge');
+        const text = document.getElementById('colDetailAccuracyText');
+
+        if (!navigator.geolocation) {
+          if (!silent) alert("Geolocation is not supported by your browser.");
+          return;
+        }
+
+        if (btn && btnText) {
+          btnText.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Locating...';
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            const accuracy = pos.coords.accuracy || 10;
+
+            updateMapAndHUD(lat, lng, accuracy);
+            fetchRoadRoute(lat, lng);
+
+            if (flyTo) {
+              map.flyTo([lat, lng], Math.max(map.getZoom(), 15), { duration: 1.2 });
+            }
+
+            if (badge && text) {
+              badge.classList.remove('d-none');
+              text.textContent = `GPS: ±${Math.round(accuracy)}m (Accurate)`;
+            }
+
+            if (btn && btnText) {
+              btnText.innerHTML = '<i class="fas fa-check me-1"></i> Located';
+              setTimeout(() => {
+                btnText.innerHTML = 'My Live Location';
+              }, 3000);
+            }
+          },
+          (err) => {
+            console.warn("GPS error:", err);
+            if (btn && btnText) {
+              btnText.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> GPS Error';
+              setTimeout(() => {
+                btnText.innerHTML = 'My Live Location';
+              }, 3000);
+            }
+            if (!silent && err.code === 1) {
+              alert("Location permission was denied. Please allow location access to show your live location.");
+            }
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+      }
+
+      const locateBtn = document.getElementById('btnLocateCollector');
+      if (locateBtn) {
+        locateBtn.addEventListener('click', () => locateCollectorLive(true, false));
+      }
+
+      // Auto-locate on page load &mdash; use live GPS as the default starting position
+      // Falls back to the offset position silently if GPS is unavailable
+      if (navigator.geolocation) {
+        locateCollectorLive(true, true);
+      } else {
+        fetchRoadRoute(currentColLat, currentColLng);
+      }
+
+      // Simulation Driver Mode (Animates along real road waypoints!)
+      let simInterval = null;
+      document.getElementById('simDriveBtn').addEventListener('click', function () {
+        if (simInterval) {
+          clearInterval(simInterval);
+          simInterval = null;
+          this.innerHTML = '<i class="fas fa-play me-1"></i> Simulate Driving to Pickup';
+          this.classList.remove('btn-danger');
+          this.classList.add('btn-primary');
+          return;
+        }
+
+        this.innerHTML = '<i class="fas fa-pause me-1"></i> Stop Simulation';
+        this.classList.remove('btn-primary');
+        this.classList.add('btn-danger');
+
+        let index = 0;
+        const total = roadWaypoints.length;
+
+        simInterval = setInterval(() => {
+          if (index >= total) {
+            clearInterval(simInterval);
+            simInterval = null;
+            document.getElementById('simDriveBtn').innerHTML = '<i class="fas fa-check me-1"></i> Arrived at Pickup';
+            document.getElementById('simDriveBtn').className = 'btn btn-sm btn-success';
+            updateMapAndHUD(pickupLat, pickupLng);
+            return;
+          }
+
+          const pt = roadWaypoints[index];
+          updateMapAndHUD(pt[0], pt[1]);
+          index++;
+        }, 400);
+      });
+
+      // Geolocation Watcher with explicit permission handling
+      let watchId = null;
+      const gpsBtn = document.getElementById('broadcastGpsBtn');
+      const gpsStatus = document.getElementById('gpsStatusText');
+
+      if (gpsBtn) {
+        gpsBtn.addEventListener('click', function () {
+          if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            if (gpsStatus) gpsStatus.textContent = "Enable Live GPS";
+            this.classList.remove('btn-success');
+            this.classList.add('btn-outline-success');
+            return;
+          }
+
+          if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+          }
+
+          if (gpsStatus) gpsStatus.textContent = "Requesting GPS...";
+          gpsBtn.className = 'btn btn-sm btn-warning shadow-sm';
+
+          watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              let lat = pos.coords.latitude;
+              let lng = pos.coords.longitude;
+              let accuracy = pos.coords.accuracy || 10;
+              updateMapAndHUD(lat, lng, accuracy);
+              fetchRoadRoute(lat, lng);
+              if (gpsStatus) gpsStatus.textContent = "Live GPS Active";
+              gpsBtn.className = 'btn btn-sm btn-success shadow-sm';
+              const badge = document.getElementById('colDetailAccuracyBadge');
+              const text = document.getElementById('colDetailAccuracyText');
+              if (badge && text) {
+                badge.classList.remove('d-none');
+                text.textContent = `Live GPS: ±${Math.round(accuracy)}m`;
+              }
+            },
+            (err) => {
+              if (gpsStatus) gpsStatus.textContent = "Enable Live GPS";
+              gpsBtn.className = 'btn btn-sm btn-outline-danger shadow-sm';
+              if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+              }
+              alert("Location permission was denied or timed out. Please allow location access in your browser to enable live tracking.");
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+        });
+      }
+
+      // 5-second Auto Refresh Timer for Realtime Map & Path Tracing
+      let autoRefreshInterval = setInterval(function () {
+        if (!document.hidden && currentColLat && currentColLng) {
+          fetchRoadRoute(currentColLat, currentColLng);
+          locateCollectorLive(false, true); // Refresh location silently without jarring map pans
+        }
+      }, 5000);
+
+      window.addEventListener('beforeunload', () => {
+        if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
+        if (simInterval) clearInterval(simInterval);
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        map.remove();
+      });
+    });
+  </script>
+{% endblock inline_javascript %}

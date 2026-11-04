@@ -1,0 +1,1649 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Collector Dashboard | TrashPort{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+  /* -------------------------------------------------------------------------------------------------------- Dashboard Root Variables -------------------------------------------------------------------------------------------------------- */
+  :root {
+    --brand-primary: #059669;
+    --surface-bg: #f8fafc;
+    --card-bg: linear-gradient(135deg, rgba(236, 253, 245, 0.75) 0%, rgba(255, 255, 255, 0.9) 100%);
+    --card-border: rgba(16, 185, 129, 0.25);
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --shadow-sm: 0 4px 14px rgba(5, 150, 105, 0.06);
+    --shadow-md: 0 10px 30px rgba(5, 150, 105, 0.1);
+    --shadow-lg: 0 20px 50px rgba(5, 150, 105, 0.15);
+    --radius-md: 16px;
+    --radius-lg: 24px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* -------------------------------------------------------------------------------------------------------- Page Layout -------------------------------------------------------------------------------------------------------- */
+  .collector-dashboard {
+    min-height: 100vh;
+    background-color: #f8fafc;
+    background-image: radial-gradient(rgba(16, 185, 129, 0.08) 1px, transparent 1px);
+    background-size: 24px 24px;
+    padding: 2rem 0 4rem;
+  }
+
+  /* -------------------------------------------------------------------------------------------------------- Hero Header -------------------------------------------------------------------------------------------------------- */
+  .dashboard-hero {
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem 2.5rem 5rem;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: -3rem;
+    color: #0f172a;
+    box-shadow: 0 10px 40px -10px rgba(5, 150, 105, 0.1);
+  }
+  .dashboard-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .dashboard-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: 30%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #047857;
+    font-family: 'Fira Code', monospace;
+    border-radius: 50px;
+    padding: 0.35rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .hero-title {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #0f172a;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.25rem;
+  }
+  .hero-subtitle {
+    font-size: 1rem;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  /* -------------------------------------------------------------------------------------------------------- Stat Cards -------------------------------------------------------------------------------------------------------- */
+  .stats-row {
+    position: relative;
+    z-index: 10;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-md);
+    padding: 1.6rem 1.75rem;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    height: 100%;
+  }
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+  .stat-icon-wrap {
+    width: 58px; height: 58px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+  .stat-icon-wallet { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #16a34a; }
+  .stat-icon-blue   { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #4338ca; }
+  .stat-icon-green  { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
+  .stat-icon-amber  { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+
+  .stat-text-label {
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.3rem;
+  }
+  .stat-text-value {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .stat-text-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.2rem;
+  }
+
+  /* -------------------------------------------------------------------------------------------------------- Section Cards -------------------------------------------------------------------------------------------------------- */
+  .section-card {
+    background: var(--card-bg);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 1.75rem;
+    transition: var(--transition);
+  }
+  .section-card:hover { box-shadow: var(--shadow-md); }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.35rem 1.75rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    background: #fafafa;
+  }
+  .section-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+  }
+  .section-header-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+  }
+  .icon-primary { background: linear-gradient(135deg, #dcfce7, #bbf7d0); color: #16a34a; }
+  .icon-success { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
+  .icon-warning { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+  .section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+  .section-subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .section-count-badge {
+    background: linear-gradient(135deg, #16a34a, #059669);
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.2rem 0.65rem;
+    border-radius: 50px;
+  }
+
+  /* Live GPS Radar Animation & In-map Controls */
+  @keyframes liveGpsPulse {
+    0% { transform: scale(0.95); opacity: 0.9; }
+    50% { transform: scale(1.4); opacity: 0.25; }
+    100% { transform: scale(0.95); opacity: 0.9; }
+  }
+  .live-truck-marker {
+    position: relative;
+  }
+  .live-truck-marker::after {
+    content: '';
+    position: absolute;
+    top: -6px; left: -6px; right: -6px; bottom: -6px;
+    border-radius: 50%;
+    border: 3px solid #16a34a;
+    animation: liveGpsPulse 2s infinite ease-in-out;
+  }
+  .leaflet-bar .leaflet-control-locate-btn {
+    background-color: #ffffff !important;
+    border: none !important;
+    color: #16a34a !important;
+    font-size: 15px !important;
+    width: 34px !important;
+    height: 34px !important;
+    line-height: 34px !important;
+    text-align: center !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+  }
+  .leaflet-bar .leaflet-control-locate-btn:hover {
+    background-color: #dcfce7 !important;
+    color: #15803d !important;
+  }
+  .leaflet-bar .leaflet-control-locate-btn.active {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+  }
+
+  /* -------------------------------------------------------------------------------------------------------- Data Table -------------------------------------------------------------------------------------------------------- */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .data-table thead th {
+    background: #f8fafc;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    padding: 0.85rem 1.2rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    white-space: nowrap;
+  }
+  .data-table tbody tr {
+    transition: background 0.18s ease;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .data-table tbody tr:last-child { border-bottom: none; }
+  .data-table tbody tr:hover { background: #f8fafc; }
+  .data-table tbody td {
+    padding: 1rem 1.2rem;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+  .pickup-id {
+    font-weight: 700;
+    color: #16a34a;
+    font-size: 0.875rem;
+    background: #dcfce7;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .customer-name { font-weight: 600; color: var(--text-primary); }
+  .address-text {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+  .category-pill {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    display: inline-block;
+  }
+  .weight-text { font-weight: 700; color: var(--text-primary); }
+  .schedule-text { font-size: 0.8rem; color: var(--text-secondary); }
+
+  /* -------------------------------------------------------------------------------------------------------- Status Badges -------------------------------------------------------------------------------------------------------- */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.28rem 0.75rem;
+    border-radius: 50px;
+  }
+  .status-assigned { background: #dbeafe; color: #1d4ed8; }
+  .status-transit  { background: #fef3c7; color: #b45309; }
+  .status-completed{ background: #d1fae5; color: #047857; }
+  .status-default  { background: #f1f5f9; color: #475569; }
+
+  /* -------------------------------------------------------------------------------------------------------- Action Buttons -------------------------------------------------------------------------------------------------------- */
+  .actions-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--transition);
+  }
+  .btn-view     { background: #f1f5f9; color: #334155; }
+  .btn-view:hover { background: #e2e8f0; color: #0f172a; }
+  .btn-transit  { background: #f59e0b; color: white; }
+  .btn-transit:hover { background: #d97706; color: white; }
+  .btn-complete { background: #16a34a; color: white; }
+  .btn-complete:hover { background: #15803d; color: white; }
+  .btn-claim    { background: #16a34a; color: white; }
+  .btn-claim:hover { background: #15803d; color: white; }
+
+  /* -------------------------------------------------------------------------------------------------------- Empty State -------------------------------------------------------------------------------------------------------- */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+  }
+  .empty-state-icon { font-size: 2.5rem; margin-bottom: 1rem; opacity: 0.35; }
+  .empty-state-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+  }
+  .empty-state-desc { font-size: 0.82rem; color: var(--text-muted); margin: 0; }
+
+  /* -------------------------------------------------------------------------------------------------------- History Toggle -------------------------------------------------------------------------------------------------------- */
+  .history-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: 1.5px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #16a34a;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .history-toggle-btn:hover { background: #dcfce7; border-color: #16a34a; }
+
+  /* -------------------------------------------------------------------------------------------------------- Animations -------------------------------------------------------------------------------------------------------- */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .anim-fade-up { animation: fadeInUp 0.5s ease both; }
+  .anim-delay-1 { animation-delay: 0.05s; }
+  .anim-delay-2 { animation-delay: 0.10s; }
+  .anim-delay-3 { animation-delay: 0.15s; }
+  .anim-delay-4 { animation-delay: 0.20s; }
+
+  /* -------------------------------------------------------------------------------------------------------- Responsive -------------------------------------------------------------------------------------------------------- */
+  @media (max-width: 768px) {
+    .dashboard-hero { padding: 2rem 1.5rem 4.5rem; }
+    .hero-title { font-size: 1.55rem; }
+    .stat-card { padding: 1.25rem; }
+    .stat-text-value { font-size: 1.5rem; }
+    .data-table thead { display: none; }
+    .data-table tbody tr { display: block; padding: 1rem; border-bottom: 1px solid #f0f0f0; }
+    .data-table tbody td { display: block; padding: 0.3rem 0; border: none; }
+    .data-table tbody td::before {
+      content: attr(data-label) ': ';
+      font-weight: 700;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .address-text { max-width: 100%; }
+  }
+</style>
+{% endblock css %}
+
+{% block content %}
+<div class="collector-dashboard">
+  <div class="container-xl px-3 px-md-4">
+
+    <!-- -------------------------------------------------------------------------------------------------------- Collector Verification Notice (if pending or rejected) -------------------------------------------------------------------------------------------------------- -->
+    {% if not is_verified %}
+      {% if verification_status == 'REJECTED' %}
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 p-4 mb-4 d-flex align-items-center gap-3">
+          <div class="p-3 bg-danger-subtle text-danger rounded-circle">
+            <i class="fas fa-times-circle fs-3"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-1 text-danger">Collector Verification Rejected</h5>
+            <p class="mb-0 text-muted small">Your collector account verification was not approved by an administrator. You cannot claim or execute collection jobs. Please contact admin support.</p>
+          </div>
+        </div>
+      {% else %}
+        <div class="alert alert-warning border-0 shadow-sm rounded-4 p-4 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="p-3 bg-warning-subtle text-warning-emphasis rounded-circle">
+              <i class="fas fa-clock fs-3"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-1 text-dark">Account Pending Admin Verification</h5>
+              <p class="mb-0 text-muted small">Your collector registration has been submitted and is awaiting administrator verification. Once verified, you can immediately claim and collect waste pickups.</p>
+            </div>
+          </div>
+          <span class="badge bg-warning text-dark px-3 py-2 fw-bold text-uppercase">Under Review</span>
+        </div>
+      {% endif %}
+    {% endif %}
+
+    <!-- -------------------------------------------------------------------------------------------------------- Aadhaar Verification Notice (Collector-scoped &mdash; DEMO MODE) -------------------------------------------------------------------------------------------------------- -->
+    {# This banner is shown only to collectors who haven't completed Aadhaar  #}
+    {# verification. It reads from CollectorAadhaarProfile, not users.User.   #}
+    {% if not aadhaar_verified %}
+      <div class="alert border-0 shadow-sm rounded-4 p-4 mb-4 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3"
+           style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border-left: 4px solid #ea580c !important;">
+        <div class="d-flex align-items-center gap-3">
+          <div class="p-3 rounded-circle" style="background:rgba(234,88,12,0.12); color:#ea580c;">
+            <i class="fas fa-id-card fs-3"></i>
+          </div>
+          <div>
+            <h5 class="fw-bold mb-1" style="color:#9a3412;">
+              🪪 Aadhaar Verification Pending
+              <span class="badge ms-2 fw-normal" style="background:#ea580c; font-size:0.65rem;">DEMO MODE</span>
+            </h5>
+            <p class="mb-0 small" style="color:#7c2d12;">
+              Complete your simulated Aadhaar verification to activate your Collector account.
+              {% if aadhaar_masked %}
+                Previously entered: <strong style="font-family:monospace;">{{ aadhaar_masked }}</strong>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        <a href="/api/collectors/aadhaar/"
+           class="btn fw-bold px-4 py-2 flex-shrink-0"
+           style="background:#ea580c; color:white; border-radius:0.6rem; white-space:nowrap;">
+          Verify Aadhaar →
+        </a>
+      </div>
+    {% else %}
+      <!-- Aadhaar verified badge &mdash; shown after successful verification -->
+      <div class="alert border-0 shadow-sm rounded-4 px-4 py-3 mb-4 d-flex align-items-center gap-3"
+           style="background:#f0fdf4; border-left: 4px solid #16a34a !important;">
+        <i class="fas fa-id-card-alt" style="color:#16a34a; font-size:1.5rem;"></i>
+        <div>
+          <span class="fw-semibold" style="color:#166534;">Aadhaar Verified</span>
+          <span class="text-muted small ms-2" style="font-family:monospace;">{{ aadhaar_masked }}</span>
+          <span class="badge ms-2 fw-normal" style="background:#dcfce7; color:#166534; font-size:0.65rem;">DEMO</span>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- -------------------------------------------------------------------------------------------------------- Hero Header -------------------------------------------------------------------------------------------------------- -->
+    <div class="dashboard-hero anim-fade-up">
+      <div class="hero-badge">
+        {% if is_verified %}
+          <i class="fas fa-check-circle" style="color: #86efac;"></i>
+          Verified Collector
+        {% else %}
+          <i class="fas fa-shield-alt"></i>
+          Collector Portal
+        {% endif %}
+      </div>
+      <h1 class="hero-title">
+        Welcome back, {{ request.user.name|default:request.user.email }}!
+      </h1>
+      <p class="hero-subtitle">Earn Rs. {{ payout_settings.base_min_payout|default:"25" }} base min + Rs. {{ payout_settings.rate_per_km|default:"2" }}/km distance payout + {{ payout_settings.extra_weight_commission_percent|default:"20" }}% extra weight commission, verify waste on-site, and instantly redeem earnings to UPI.</p>
+    </div>
+
+    <!-- -------------------------------------------------------------------------------------------------------- Stat Cards -------------------------------------------------------------------------------------------------------- -->
+    <div class="row g-3 stats-row">
+      <!-- Collector Cash Wallet Card with Redeem Button -->
+      <div class="col-12 col-md-4 anim-fade-up anim-delay-1">
+        <div class="stat-card flex-column align-items-stretch justify-content-between">
+          <div class="d-flex align-items-center gap-3 mb-2">
+            <div class="stat-icon-wrap stat-icon-wallet">
+              <i class="fas fa-wallet"></i>
+            </div>
+            <div>
+              <div class="stat-text-label">Wallet Balance</div>
+              <div class="stat-text-value text-success">Rs. {{ wallet_balance|default:"0.00" }}</div>
+              <div class="stat-text-sub">Collection Earnings</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-success btn-sm w-100 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                  data-bs-toggle="modal" data-bs-target="#redeemUpiModal" {% if not is_verified %}disabled title="Account must be verified to redeem"{% endif %}>
+            <i class="fas fa-arrow-circle-up"></i> Redeem to UPI
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Assigned Jobs -->
+      <div class="col-6 col-md-2 anim-fade-up anim-delay-2">
+        <div class="stat-card" style="cursor:pointer;" onclick="document.querySelector('.section-card').scrollIntoView({behavior: 'smooth'})">
+          <div class="stat-icon-wrap stat-icon-blue">
+            <i class="fas fa-clipboard-list"></i>
+          </div>
+          <div>
+            <div class="stat-text-label">Active Jobs</div>
+            <div class="stat-text-value">{{ assigned_pickups.count }}</div>
+            <div class="stat-text-sub">In progress</div>
+          </div>
+        </div>
+      </div>
+      <!-- Completed Jobs -->
+      <div class="col-6 col-md-3 anim-fade-up anim-delay-3">
+        <div class="stat-card" style="cursor:pointer;" onclick="const el = document.getElementById('completedHistoryTable'); if(el){ new bootstrap.Collapse(el, {toggle: true}); el.scrollIntoView({behavior: 'smooth'}); }">
+          <div class="stat-icon-wrap stat-icon-green">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div>
+            <div class="stat-text-label">Completed</div>
+            <div class="stat-text-value">{{ completed_count|default:completed_pickups.count }}</div>
+            <div class="stat-text-sub">Total collections</div>
+          </div>
+        </div>
+      </div>
+      <!-- Available Jobs -->
+      <div class="col-12 col-md-3 anim-fade-up anim-delay-4">
+        <div class="stat-card" style="cursor:pointer;" onclick="document.getElementById('availableJobsTable').scrollIntoView({behavior: 'smooth'})">
+          <div class="stat-icon-wrap stat-icon-amber">
+            <i class="fas fa-hourglass-half"></i>
+          </div>
+          <div>
+            <div class="stat-text-label">Available</div>
+            <div class="stat-text-value">{{ unassigned_pickups.count }}</div>
+            <div class="stat-text-sub">Jobs to claim</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------------------------------------------------- Redeem to UPI Modal -------------------------------------------------------------------------------------------------------- -->
+    <div class="modal fade" id="redeemUpiModal" tabindex="-1" aria-labelledby="redeemUpiModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+          <div class="modal-header bg-success text-white p-4">
+            <div class="d-flex align-items-center gap-2">
+              <i class="fas fa-mobile-alt fs-4"></i>
+              <div>
+                <h5 class="modal-title fw-bold mb-0" id="redeemUpiModalLabel">Redeem Earnings to UPI</h5>
+                <small class="opacity-75">Instant payout to your bank account / UPI VPA</small>
+              </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <form method="post" action="{% url 'waste_management:collector_redeem_upi' %}">
+            {% csrf_token %}
+            <div class="modal-body p-4">
+              <div class="p-3 bg-light rounded-3 mb-3 border d-flex justify-content-between align-items-center">
+                <span class="text-muted small fw-bold text-uppercase">Available Balance:</span>
+                <span class="fs-5 fw-bold text-success">Rs. {{ wallet_balance|default:"0.00" }}</span>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold small text-dark">UPI ID / VPA Address:</label>
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-at text-muted"></i></span>
+                  <input type="text" name="upi_id" class="form-control" placeholder="e.g. yourname@okhdfcbank or 9876543210@paytm" required>
+                </div>
+                <small class="text-muted">Enter any valid UPI handle (Google Pay, PhonePe, Paytm, BHIM, etc.).</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-bold small text-dark">Withdrawal Amount (Rs.):</label>
+                <div class="input-group">
+                  <span class="input-group-text fw-bold">Rs.</span>
+                  <input type="number" step="0.01" min="1" max="{{ wallet_balance|default:'0.00' }}" name="amount" class="form-control fw-bold" placeholder="Amount to withdraw" required>
+                </div>
+              </div>
+
+              <div class="alert alert-info py-2 px-3 small d-flex align-items-center gap-2 mb-0">
+                <i class="fas fa-shield-alt text-primary fs-5"></i>
+                <span>Zero transaction fees. Funds are credited directly to your connected bank via UPI.</span>
+              </div>
+            </div>
+            <div class="modal-footer bg-light p-3">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-success fw-bold px-4">
+                <i class="fas fa-check-circle me-1"></i> Confirm &amp; Redeem
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------------------------------------------------- Active Pickups -------------------------------------------------------------------------------------------------------- -->
+    <div class="section-card anim-fade-up anim-delay-2">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-header-icon icon-primary">
+            <i class="fas fa-bolt"></i>
+          </div>
+          <div>
+            <p class="section-title">Your Active Pickups (Multiple Jobs)</p>
+            <p class="section-subtitle">Manage all your claimed &amp; in-transit jobs concurrently</p>
+          </div>
+        </div>
+        {% if assigned_pickups.count > 0 %}
+          <span class="section-count-badge bg-primary text-white"><i class="fas fa-layer-group me-1"></i>{{ assigned_pickups.count }} active jobs</span>
+        {% endif %}
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Customer</th>
+              <th>Address</th>
+              <th>Category</th>
+              <th>Weight</th>
+              <th>Distance</th>
+              <th>Est. Earning</th>
+              <th>Scheduled</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pickup in assigned_pickups %}
+              <tr>
+                <td data-label="ID"><span class="pickup-id">#{{ pickup.id }}</span></td>
+                <td data-label="Customer"><span class="customer-name">{{ pickup.citizen.name|default:pickup.citizen.email }}</span></td>
+                <td data-label="Address">
+                  <span class="address-text" title="{{ pickup.address.address_line1 }}, {{ pickup.address.city }}">
+                    {{ pickup.address.address_line1 }}, {{ pickup.address.city }}
+                  </span>
+                </td>
+                <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
+                <td data-label="Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
+                <td data-label="Distance"><span class="badge bg-light text-dark border">{{ pickup.distance_km }} km</span></td>
+                <td data-label="Est. Earning">
+                  <span class="fw-bold text-success">
+                    Rs. {{ pickup.collector_earnings|default:"50.00" }}
+                  </span>
+                  <small class="text-muted d-block" style="font-size:0.7rem;">Rs 25 min + Rs 2/km + 20% extra wt</small>
+                </td>
+                <td data-label="Scheduled">
+                  <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
+                </td>
+                <td data-label="Status">
+                  {% if pickup.status == 'ASSIGNED' %}
+                    <span class="status-badge status-assigned">Assigned</span>
+                  {% elif pickup.status == 'IN_TRANSIT' %}
+                    <span class="status-badge status-transit">In Transit</span>
+                  {% else %}
+                    <span class="status-badge status-default">{{ pickup.status }}</span>
+                  {% endif %}
+                </td>
+                <td data-label="Actions">
+                  <div class="actions-wrap">
+                    <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="action-btn btn-view">
+                      <i class="fas fa-eye"></i> View &amp; Verify
+                    </a>
+                    {% if pickup.status == 'ASSIGNED' %}
+                      <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="transit">
+                        <button type="submit" class="action-btn btn-transit">
+                          <i class="fas fa-truck"></i> Start Transit
+                        </button>
+                      </form>
+                    {% elif pickup.status == 'IN_TRANSIT' %}
+                      <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="action-btn btn-complete">
+                        <i class="fas fa-balance-scale"></i> Measure &amp; Complete
+                      </a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="10">
+                  <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-clipboard"></i></div>
+                    <p class="empty-state-title">No active pickups assigned to you</p>
+                    <p class="empty-state-desc">Claim an available job from the section below to get started!</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------------------------------------------------- Available Jobs to Claim (With Proximity Priority & Opportunity Map) -------------------------------------------------------------------------------------------------------- -->
+    <div class="section-card anim-fade-up anim-delay-3">
+      <div class="section-header flex-column flex-md-row align-items-start align-items-md-center gap-2">
+        <div class="section-header-left">
+          <div class="section-header-icon icon-warning">
+            <i class="fas fa-crosshairs"></i>
+          </div>
+          <div>
+            <p class="section-title">Nearby Pickup Opportunities (Nearest-First)</p>
+            <p class="section-subtitle">Prioritized by distance from your current live GPS position (strictly within 25 km range)</p>
+          </div>
+        </div>
+
+        <!-- Radius Expansion Toolbar & Real-Time Location Button -->
+        <div class="d-flex flex-wrap gap-2 align-items-center" id="radiusToolbar">
+          <button type="button" id="getCollectorGpsBtn" class="btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-crosshairs me-1"></i> <span id="gpsBtnLabel">Use Real-Time GPS</span>
+          </button>
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-success radius-btn active" data-max-dist="25" id="allRadiusBtn">
+              <i class="fas fa-globe me-1"></i> All (<span id="inRangeCount">{{ unassigned_pickups|length }}</span>)
+            </button>
+            <button type="button" class="btn btn-outline-success radius-btn" data-max-dist="5">
+              &lt; 5 km
+            </button>
+            <button type="button" class="btn btn-outline-warning radius-btn" data-max-dist="15">
+              &lt; 15 km
+            </button>
+            <button type="button" class="btn btn-outline-primary radius-btn" data-max-dist="25">
+              &lt; 25 km
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Opportunity Map -->
+      <div class="p-3 bg-light border-bottom">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2 mb-2 px-1">
+          <div class="d-flex align-items-center flex-wrap gap-2">
+            <span class="small fw-bold text-dark"><i class="fas fa-map-marked-alt text-success me-1"></i> Interactive Pickup Map &amp; Route Previewer</span>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+              <i class="fas fa-warehouse me-1"></i> Collector Hubs
+            </span>
+            <span id="liveLocationAccuracyBadge" class="badge bg-success-subtle text-success border border-success-subtle d-none">
+              <i class="fas fa-satellite-dish me-1"></i> <span id="accuracyText">GPS: Accurate</span>
+            </span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-success text-white shadow-sm fw-semibold" id="btnCollectorLiveLocation" title="Get accurate live GPS location">
+              <i class="fas fa-crosshairs me-1"></i> <span id="btnLiveLocationText">My Live Location</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-success shadow-sm fw-semibold" id="btnToggleLiveGpsTracking" title="Continuous Live GPS Tracking">
+              <i class="fas fa-broadcast-tower me-1"></i> <span id="btnTrackingText">Track Vehicle</span>
+            </button>
+          </div>
+        </div>
+        <div id="collectorOpportunityMap" class="shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #16a34a; position: relative; z-index: 1;"></div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="availableJobsTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Proximity</th>
+              <th>City &amp; Address</th>
+              <th>Category</th>
+              <th>Est. Weight</th>
+              <th>Est. Earning</th>
+              <th>Scheduled</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pickup in unassigned_pickups %}
+              <tr class="pickup-job-row" data-distance="{{ pickup.calculated_distance_km }}" id="pickup-row-{{ pickup.id }}">
+                <td data-label="ID"><span class="pickup-id">#{{ pickup.id }}</span></td>
+                <td data-label="Proximity">
+                  {% if pickup.calculated_distance_km <= 5.0 %}
+                    <span class="badge bg-success text-white p-2" title="Immediate priority (< 5km)">
+                      <i class="fas fa-bolt me-1"></i> {{ pickup.calculated_distance_km }} km (Near)
+                    </span>
+                  {% elif pickup.calculated_distance_km <= 15.0 %}
+                    <span class="badge bg-warning text-dark p-2" title="Nearby pickup (< 15km)">
+                      <i class="fas fa-map-marker-alt me-1"></i> {{ pickup.calculated_distance_km }} km
+                    </span>
+                  {% else %}
+                    <span class="badge bg-primary text-white p-2" title="District pickup">
+                      <i class="fas fa-route me-1"></i> {{ pickup.calculated_distance_km }} km
+                    </span>
+                  {% endif %}
+                </td>
+                <td data-label="City & Address">
+                  <span class="customer-name d-block">{{ pickup.address.city }}</span>
+                  <span class="address-text" title="{{ pickup.address.address_line1 }}">{{ pickup.address.address_line1 }}</span>
+                </td>
+                <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
+                <td data-label="Est. Weight"><span class="weight-text">{{ pickup.weight_kg }} kg</span></td>
+                <td data-label="Est. Earning">
+                  <span class="fw-bold text-success">
+                    Rs. {{ pickup.calculated_earnings|default:pickup.collector_earnings }}
+                  </span>
+                  <small class="text-muted d-block" style="font-size:0.7rem;">Rs {{ payout_settings.base_min_payout|default:"25" }} min + Rs {{ payout_settings.rate_per_km|default:"2" }}/km + {{ payout_settings.extra_weight_commission_percent|default:"20" }}% extra wt</small>
+                </td>
+                <td data-label="Scheduled">
+                  <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
+                </td>
+                <td data-label="Action">
+                  {% if is_verified %}
+                    <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" style="display:inline;">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="claim">
+                      <button type="submit" class="action-btn btn-claim shadow-sm">
+                        <i class="fas fa-hand-pointer"></i> Claim Job
+                      </button>
+                    </form>
+                  {% else %}
+                    <button type="button" class="action-btn btn-view" disabled style="opacity:0.6;cursor:not-allowed;" title="Admin verification required to claim jobs">
+                      <i class="fas fa-lock"></i> Verification Required
+                    </button>
+                  {% endif %}
+                </td>
+              </tr>
+            <tr id="noJobsInRangeRow" style="display: none;">
+              <td colspan="8">
+                <div class="empty-state py-4 text-center">
+                  <div class="empty-state-icon text-muted mb-2"><i class="fas fa-map-marker-slash fa-2x"></i></div>
+                  <p class="empty-state-title fw-bold text-dark mb-1">No pickups within selected range</p>
+                  <p class="empty-state-desc text-muted mb-0 small">There are no pickup opportunities within this distance (max 25 km collection range).</p>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8">
+                  <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-box-open"></i></div>
+                    <p class="empty-state-title">No pending jobs available</p>
+                    <p class="empty-state-desc">There are currently no unassigned pickups within your 25 km collection range. Check back soon!</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------------------------------------------------- Completed History (Collapsible) -------------------------------------------------------------------------------------------------------- -->
+    {% if completed_pickups %}
+    <div class="section-card anim-fade-up anim-delay-4">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-header-icon icon-success">
+            <i class="fas fa-history"></i>
+          </div>
+          <div>
+            <p class="section-title">Completed Collections &amp; Earnings</p>
+            <p class="section-subtitle">Your fulfilled collection history and wallet earnings</p>
+          </div>
+        </div>
+        <button id="historyToggleBtn" class="history-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#completedHistoryTable" aria-expanded="false">
+          <i class="fas fa-chevron-down"></i>
+          Show History
+        </button>
+      </div>
+
+      <div class="collapse" id="completedHistoryTable">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Category</th>
+                <th>Measured Weight</th>
+                <th>Extra Charge</th>
+                <th>Distance</th>
+                <th>Your Payout</th>
+                <th>Scheduled</th>
+                <th>Status</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pickup in completed_pickups %}
+                <tr>
+                  <td data-label="ID"><span class="pickup-id">#{{ pickup.id }}</span></td>
+                  <td data-label="Customer"><span class="customer-name">{{ pickup.citizen.name|default:pickup.citizen.email }}</span></td>
+                  <td data-label="Category"><span class="category-pill">{{ pickup.category.name }}</span></td>
+                  <td data-label="Measured Weight">
+                    <span class="weight-text">{{ pickup.actual_weight_kg|default:pickup.weight_kg }} kg</span>
+                    {% if pickup.actual_weight_kg > pickup.weight_kg %}
+                      <small class="text-danger d-block">(+{{ pickup.actual_weight_kg|add:"-"|add:pickup.weight_kg }}kg excess)</small>
+                    {% endif %}
+                  </td>
+                  <td data-label="Extra Charge">
+                    {% if pickup.extra_fee > 0 %}
+                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle">+Rs. {{ pickup.extra_fee }} (2x)</span>
+                    {% else %}
+                      <span class="text-muted small">Rs. 0.00</span>
+                    {% endif %}
+                  </td>
+                  <td data-label="Distance"><span class="badge bg-light text-dark border">{{ pickup.distance_km }} km</span></td>
+                  <td data-label="Your Payout"><span class="fw-bold text-success">+Rs. {{ pickup.collector_earnings }}</span></td>
+                  <td data-label="Scheduled">
+                    <span class="schedule-text">{{ pickup.schedule_date|date:"M d, Y" }}<br>{{ pickup.schedule_date|date:"h:i A" }}</span>
+                  </td>
+                  <td data-label="Status"><span class="status-badge status-completed">Completed</span></td>
+                  <td data-label="Details">
+                    <a href="{% url 'waste_management:pickup_detail' pickup.id %}" class="action-btn btn-view">
+                      <i class="fas fa-eye"></i> View
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- -------------------------------------------------------------------------------------------------------- UPI Redemption History Table -------------------------------------------------------------------------------------------------------- -->
+    {% if upi_payouts %}
+    <div class="section-card anim-fade-up anim-delay-4">
+      <div class="section-header">
+        <div class="section-header-left">
+          <div class="section-header-icon" style="background:#e0f2fe;color:#0284c7;">
+            <i class="fas fa-mobile-alt"></i>
+          </div>
+          <div>
+            <p class="section-title">UPI Redemption &amp; Payout History</p>
+            <p class="section-subtitle">Total redeemed: Rs. {{ total_redeemed_upi|default:"0.00" }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Reference ID</th>
+              <th>UPI ID</th>
+              <th>Amount (Rs.)</th>
+              <th>Date &amp; Time</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in upi_payouts %}
+              <tr>
+                <td data-label="Reference ID"><span class="badge bg-light text-dark border fw-bold">{{ p.transaction_ref }}</span></td>
+                <td data-label="UPI ID"><span class="fw-semibold text-dark">{{ p.upi_id }}</span></td>
+                <td data-label="Amount"><span class="fw-bold text-success">Rs. {{ p.amount }}</span></td>
+                <td data-label="Date">{{ p.created_at|date:"M d, Y h:i A" }}</td>
+                <td data-label="Status">
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    <i class="fas fa-check-circle me-1"></i> {{ p.status }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div><!-- /.container-xl -->
+</div><!-- /.collector-dashboard -->
+{% endblock %}
+
+{% block inline_javascript %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    // 1. History Table Toggle
+    const historyCollapse = document.getElementById('completedHistoryTable');
+    const historyBtn = document.getElementById('historyToggleBtn');
+    if (historyCollapse && historyBtn) {
+      historyCollapse.addEventListener('show.bs.collapse', () => {
+        historyBtn.innerHTML = '<i class="fas fa-chevron-up"></i> Hide History';
+      });
+      historyCollapse.addEventListener('hide.bs.collapse', () => {
+        historyBtn.innerHTML = '<i class="fas fa-chevron-down"></i> Show History';
+      });
+    }
+
+    // 2. Interactive Pickup Opportunity Map
+    const mapElem = document.getElementById('collectorOpportunityMap');
+    if (!mapElem) return;
+
+    const collectorLat = parseFloat("{{ collector_lat|default:'9.9312' }}");
+    const collectorLng = parseFloat("{{ collector_lng|default:'76.2673' }}");
+    const unassignedPickups = {{ unassigned_pickups_json|safe|default:"[]" }};
+    const isVerified = {{ is_verified|yesno:"true,false" }};
+    const csrfToken = "{{ csrf_token }}";
+
+    let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
+
+    let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles &copy; Esri'
+    });
+
+    let map = L.map('collectorOpportunityMap', {
+      center: [collectorLat, collectorLng],
+      zoom: 12,
+      minZoom: 2,
+      maxZoom: 19,
+      layers: [streetLayer]
+    });
+
+    L.control.layers({
+      "📍 Street Map (OSM)": streetLayer,
+      "🛰️ Satellite View": satelliteLayer
+    }).addTo(map);
+
+    setTimeout(() => map.invalidateSize(), 300);
+
+    // Custom Icons
+    function createIcon(iconClass, bgClass, isLive = false) {
+      const liveClass = isLive ? 'live-truck-marker' : '';
+      return L.divIcon({
+        className: 'custom-map-icon',
+        html: `<div class="shadow-sm rounded-circle d-flex align-items-center justify-content-center text-white ${bgClass} ${liveClass}" style="width: 36px; height: 36px; font-size: 16px; border: 2px solid white;">
+                <i class="fas ${iconClass}"></i>
+               </div>`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18]
+      });
+    }
+
+    const MAX_COLLECTOR_RANGE_KM = 25.0;
+    let currentActiveMaxDist = MAX_COLLECTOR_RANGE_KM;
+    let currentCollectorLat = collectorLat;
+    let currentCollectorLng = collectorLng;
+    let liveAccuracyCircle = null;
+    let liveWatchId = null;
+
+    // 25 km Collector Service Range Boundary Circle
+    let collectorRangeCircle = L.circle([collectorLat, collectorLng], {
+      radius: 25000,
+      color: '#16a34a',
+      fillColor: '#22c55e',
+      fillOpacity: 0.05,
+      weight: 2,
+      dashArray: '6, 6'
+    }).addTo(map);
+    collectorRangeCircle.bindTooltip("25 km Collector Service Range", { sticky: true, direction: 'top' });
+
+    // Collector Truck Marker
+    let colMarker = L.marker([collectorLat, collectorLng], {
+      icon: createIcon("fa-truck", "bg-success", true)
+    }).addTo(map).bindPopup("<b>🚚 Your Live Location</b><br>Collector Vehicle Position<br><span class=\"badge bg-success mt-1\">25 km Service Range Active</span>");
+
+    // Collector Hubs Markers (Grama Panchayaths & Regional Hubs)
+    const collectorHubs = {{ hubs_json|safe|default:"[]" }};
+    let hubMarkers = [];
+
+    collectorHubs.forEach(h => {
+      const isCurrent = h.is_current;
+      const hubBg = isCurrent ? 'bg-primary' : 'bg-secondary';
+      const hubBorder = isCurrent ? 'style="width: 38px; height: 38px; font-size: 16px; border: 3px solid #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.6);"' : 'style="width: 32px; height: 32px; font-size: 14px; border: 2px solid white;"';
+
+      const hubIcon = L.divIcon({
+        className: 'custom-hub-icon',
+        html: `<div class="shadow rounded-circle d-flex align-items-center justify-content-center text-white ${hubBg}" ${hubBorder}>
+                <i class="fas fa-warehouse"></i>
+               </div>`,
+        iconSize: isCurrent ? [38, 38] : [32, 32],
+        iconAnchor: isCurrent ? [19, 19] : [16, 16],
+        popupAnchor: [0, -18]
+      });
+
+      const currentBadge = isCurrent
+        ? '<div class="badge bg-warning text-dark w-100 py-1 mb-1"><i class="fas fa-star me-1"></i>Your Assigned Hub</div>'
+        : `<form method="post" action="/dashboard/" class="mt-2">
+             <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+             <input type="hidden" name="hub_id" value="${h.id}">
+             <button type="submit" class="btn btn-sm btn-outline-primary w-100 fw-bold">
+               <i class="fas fa-exchange-alt me-1"></i> Switch to this Hub
+             </button>
+           </form>`;
+
+      const hubPopup = `
+        <div class="p-1" style="min-width: 210px;">
+          <div class="d-flex align-items-center justify-content-between mb-1">
+            <h6 class="fw-bold text-primary mb-0"><i class="fas fa-warehouse me-1"></i>${h.name}</h6>
+          </div>
+          <div class="small fw-semibold text-dark mb-1"><i class="fas fa-map-marker-alt text-danger me-1"></i>${h.city}</div>
+          <div class="small text-muted mb-2">${h.address}</div>
+          ${currentBadge}
+        </div>
+      `;
+
+      const m = L.marker([h.latitude, h.longitude], { icon: hubIcon })
+        .addTo(map)
+        .bindPopup(hubPopup);
+      hubMarkers.push(m);
+    });
+
+    // In-map Floating Locate Button
+    const LocateControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function () {
+        const container = L.DomUtil.create('div', 'leaflet-bar');
+        const link = L.DomUtil.create('a', 'leaflet-control-locate-btn', container);
+        link.innerHTML = '<i class="fas fa-crosshairs"></i>';
+        link.title = 'Show My Live Location (Accurate GPS)';
+        link.href = '#';
+        link.role = 'button';
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.on(link, 'click', function (e) {
+          L.DomEvent.preventDefault(e);
+          locateCollectorLive(true);
+        });
+        return container;
+      }
+    });
+    map.addControl(new LocateControl());
+
+    let pickupMarkers = [];
+    let previewPolyline = null;
+
+    function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
+      let pts = [];
+      let dLat = eLat - sLat;
+      let dLng = eLng - sLng;
+      let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
+      let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
+      let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
+      let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
+      let count = 16;
+      for (let i = 0; i <= count; i++) {
+        let t = i / count;
+        let lat, lng;
+        if (t < 0.5) {
+          let subT = t * 2.0;
+          lat = (1 - subT) * sLat + subT * turn1Lat;
+          lng = (1 - subT) * sLng + subT * turn1Lng;
+        } else if (t < 0.85) {
+          let subT = (t - 0.5) / 0.35;
+          lat = (1 - subT) * turn1Lat + subT * turn2Lat;
+          lng = (1 - subT) * turn1Lng + subT * turn2Lng;
+        } else {
+          let subT = (t - 0.85) / 0.15;
+          lat = (1 - subT) * turn2Lat + subT * eLat;
+          lng = (1 - subT) * turn2Lng + subT * eLng;
+        }
+        let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
+        let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
+        pts.push([lat + wLat, lng + wLng]);
+      }
+      return pts;
+    }
+
+    function renderOpportunityMarkers(maxDist = currentActiveMaxDist) {
+      pickupMarkers.forEach(m => map.removeLayer(m));
+      pickupMarkers = [];
+
+      const effectiveMax = Math.min(maxDist, MAX_COLLECTOR_RANGE_KM);
+      let bounds = [[currentCollectorLat, currentCollectorLng]];
+
+      unassignedPickups.forEach(p => {
+        if (p.distance_km <= effectiveMax) {
+          bounds.push([p.latitude, p.longitude]);
+
+          let pinBg = "bg-success";
+          if (p.distance_km > 5 && p.distance_km <= 15) pinBg = "bg-warning";
+          if (p.distance_km > 15) pinBg = "bg-primary";
+
+          let pinIcon = createIcon("fa-map-pin", pinBg);
+
+          let claimButtonHtml = isVerified ? `
+            <form method="post" action="/waste-management/pickups/${p.id}/status/">
+              <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+              <input type="hidden" name="action" value="claim">
+              <button type="submit" class="btn btn-sm btn-success w-100 fw-bold mt-2 shadow-sm">
+                <i class="fas fa-hand-pointer me-1"></i> Claim Pickup Job
+              </button>
+            </form>
+          ` : `
+            <button class="btn btn-sm btn-secondary w-100 mt-2" disabled>
+              <i class="fas fa-lock me-1"></i> Admin Verification Required
+            </button>
+          `;
+
+          let popupHtml = `
+            <div class="p-1" style="min-width: 220px;">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <h6 class="fw-bold text-success mb-0">Pickup #${p.id}</h6>
+                <span class="badge ${pinBg} text-white">${p.distance_km} km</span>
+              </div>
+              <div class="small mb-1"><strong>Customer:</strong> ${p.citizen_name}</div>
+              <div class="small mb-1"><strong>Address:</strong> ${p.address}</div>
+              <div class="small mb-1"><strong>Category:</strong> <span class="badge bg-light text-dark border">${p.category} (${p.weight_kg}kg)</span></div>
+              <div class="small fw-bold text-success mb-1">Est. Earning: Rs. ${p.earnings.toFixed(2)}</div>
+              ${claimButtonHtml}
+            </div>
+          `;
+
+          let marker = L.marker([p.latitude, p.longitude], { icon: pinIcon }).addTo(map).bindPopup(popupHtml);
+
+          marker.on('click', () => {
+            let roadWaypoints = generateClientRoadCurve(currentCollectorLat, currentCollectorLng, p.latitude, p.longitude);
+            if (previewPolyline) map.removeLayer(previewPolyline);
+            previewPolyline = L.polyline(roadWaypoints, { color: '#16a34a', weight: 5, opacity: 0.9 }).addTo(map);
+
+            fetch(`/api/maps/route/?start_lat=${currentCollectorLat}&start_lng=${currentCollectorLng}&end_lat=${p.latitude}&end_lng=${p.longitude}`)
+              .then(res => res.json())
+              .then(routeData => {
+                if (routeData && routeData.coordinates && routeData.coordinates.length > 2 && previewPolyline) {
+                  previewPolyline.setLatLngs(routeData.coordinates);
+                }
+              })
+              .catch(err => {});
+          });
+
+          pickupMarkers.push(marker);
+        }
+      });
+
+      if (bounds.length > 1) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [50, 50], maxZoom: 14 });
+      } else {
+        map.setView([currentCollectorLat, currentCollectorLng], 12);
+      }
+    }
+
+    function applyRangeFilter(maxDist) {
+      currentActiveMaxDist = Math.min(maxDist, MAX_COLLECTOR_RANGE_KM);
+      renderOpportunityMarkers(currentActiveMaxDist);
+
+      const tableRows = document.querySelectorAll('#availableJobsTable .pickup-job-row');
+      let visibleCount = 0;
+      let totalInRangeCount = 0;
+
+      tableRows.forEach(row => {
+        const rowDist = parseFloat(row.getAttribute('data-distance')) || 0;
+        if (rowDist <= MAX_COLLECTOR_RANGE_KM) {
+          totalInRangeCount++;
+        }
+        if (rowDist <= currentActiveMaxDist) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      const inRangeSpan = document.getElementById('inRangeCount');
+      if (inRangeSpan) inRangeSpan.textContent = totalInRangeCount;
+
+      const noJobsRow = document.getElementById('noJobsInRangeRow');
+      if (noJobsRow) {
+        noJobsRow.style.display = (visibleCount === 0) ? '' : 'none';
+      }
+    }
+
+    function recalculateDistances(lat, lng) {
+      unassignedPickups.forEach(p => {
+        const R = 6371;
+        const dLat = (p.latitude - lat) * Math.PI / 180;
+        const dLon = (p.longitude - lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat * Math.PI / 180) * Math.cos(p.latitude * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        p.distance_km = parseFloat((R * c).toFixed(1));
+
+        const row = document.getElementById('pickup-row-' + p.id);
+        if (row) {
+          row.setAttribute('data-distance', p.distance_km);
+          const proxCell = row.querySelector('[data-label="Proximity"]');
+          if (proxCell) {
+            if (p.distance_km <= 5.0) {
+              proxCell.innerHTML = `<span class="badge bg-success text-white p-2" title="Immediate priority (< 5km)"><i class="fas fa-bolt me-1"></i> ${p.distance_km} km (Near)</span>`;
+            } else if (p.distance_km <= 15.0) {
+              proxCell.innerHTML = `<span class="badge bg-warning text-dark p-2" title="Nearby pickup (< 15km)"><i class="fas fa-map-marker-alt me-1"></i> ${p.distance_km} km</span>`;
+            } else if (p.distance_km <= 25.0) {
+              proxCell.innerHTML = `<span class="badge bg-primary text-white p-2" title="Within Range (< 25km)"><i class="fas fa-route me-1"></i> ${p.distance_km} km</span>`;
+            } else {
+              proxCell.innerHTML = `<span class="badge bg-danger text-white p-2" title="Out of Range (> 25km)"><i class="fas fa-ban me-1"></i> ${p.distance_km} km (Out of Range)</span>`;
+            }
+          }
+        }
+      });
+      applyRangeFilter(currentActiveMaxDist);
+    }
+
+    // High-Accuracy Live Location Handler
+    function locateCollectorLive(flyTo = true) {
+      const btn = document.getElementById('btnCollectorLiveLocation');
+      const btnText = document.getElementById('btnLiveLocationText');
+      const badge = document.getElementById('liveLocationAccuracyBadge');
+      const accuracyText = document.getElementById('accuracyText');
+
+      if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        if (btnText) btnText.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Locating...';
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const accuracy = pos.coords.accuracy || 10;
+
+          currentCollectorLat = lat;
+          currentCollectorLng = lng;
+
+          colMarker.setLatLng([lat, lng]);
+          colMarker.bindPopup(`<b>🚚 Your Live Location</b><br>Collector Position (±${Math.round(accuracy)}m accuracy)<br><span class="badge bg-success mt-1">25 km Service Range Active</span>`).openPopup();
+
+          if (collectorRangeCircle) {
+            collectorRangeCircle.setLatLng([lat, lng]);
+          }
+
+          if (liveAccuracyCircle) {
+            liveAccuracyCircle.setLatLng([lat, lng]).setRadius(Math.min(accuracy, 25000));
+          } else {
+            liveAccuracyCircle = L.circle([lat, lng], {
+              radius: Math.min(accuracy, 25000),
+              color: '#16a34a',
+              fillColor: '#22c55e',
+              fillOpacity: 0.15,
+              weight: 1.5
+            }).addTo(map);
+          }
+
+          if (flyTo) {
+            map.flyTo([lat, lng], Math.max(map.getZoom(), 12), { duration: 1.2 });
+          }
+
+          if (badge && accuracyText) {
+            badge.classList.remove('d-none');
+            accuracyText.textContent = `GPS: ±${Math.round(accuracy)}m (Accurate)`;
+          }
+
+          if (btn) {
+            btn.disabled = false;
+            if (btnText) btnText.innerHTML = '<i class="fas fa-check me-1"></i> Location Updated';
+            setTimeout(() => {
+              if (btnText) btnText.innerHTML = '<i class="fas fa-crosshairs me-1"></i> My Live Location';
+            }, 3000);
+          }
+
+          recalculateDistances(lat, lng);
+
+          // Transmit location to server in background to save as collector's current location & align hub
+          fetch('/api/maps/locations/update/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+              latitude: lat,
+              longitude: lng,
+              speed: pos.coords.speed || 0.0,
+              heading: pos.coords.heading || 0.0,
+              accuracy: accuracy
+            })
+          }).catch(err => console.log('Location sync:', err));
+        },
+        (err) => {
+          console.warn('Geolocation error:', err);
+          if (btn) {
+            btn.disabled = false;
+            if (btnText) btnText.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> GPS Unavailable';
+            setTimeout(() => {
+              if (btnText) btnText.innerHTML = '<i class="fas fa-crosshairs me-1"></i> My Live Location';
+            }, 3000);
+          }
+          if (err.code === 1) {
+            alert("Location access was denied. Please allow location access in your browser to view your live GPS position.");
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    // Connect Live Location Buttons
+    const liveBtn = document.getElementById('btnCollectorLiveLocation');
+    if (liveBtn) {
+      liveBtn.addEventListener('click', () => locateCollectorLive(true));
+    }
+
+    const trackBtn = document.getElementById('btnToggleLiveGpsTracking');
+    const trackText = document.getElementById('btnTrackingText');
+
+    if (trackBtn) {
+      trackBtn.addEventListener('click', function () {
+        if (liveWatchId !== null) {
+          navigator.geolocation.clearWatch(liveWatchId);
+          liveWatchId = null;
+          trackBtn.classList.remove('btn-success', 'text-white');
+          trackBtn.classList.add('btn-outline-success');
+          if (trackText) trackText.innerHTML = '<i class="fas fa-broadcast-tower me-1"></i> Track Vehicle';
+        } else if (navigator.geolocation) {
+          liveWatchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const accuracy = pos.coords.accuracy || 10;
+              currentCollectorLat = lat;
+              currentCollectorLng = lng;
+              colMarker.setLatLng([lat, lng]);
+              if (collectorRangeCircle) {
+                collectorRangeCircle.setLatLng([lat, lng]);
+              }
+              if (liveAccuracyCircle) {
+                liveAccuracyCircle.setLatLng([lat, lng]).setRadius(Math.min(accuracy, 25000));
+              } else {
+                liveAccuracyCircle = L.circle([lat, lng], {
+                  radius: Math.min(accuracy, 25000),
+                  color: '#16a34a',
+                  fillColor: '#22c55e',
+                  fillOpacity: 0.15,
+                  weight: 1.5
+                }).addTo(map);
+              }
+              const badge = document.getElementById('liveLocationAccuracyBadge');
+              const accuracyText = document.getElementById('accuracyText');
+              if (badge && accuracyText) {
+                badge.classList.remove('d-none');
+                accuracyText.textContent = `Live GPS: ±${Math.round(accuracy)}m`;
+              }
+              recalculateDistances(lat, lng);
+
+              fetch('/api/maps/locations/update/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                  latitude: lat,
+                  longitude: lng,
+                  speed: pos.coords.speed || 0.0,
+                  heading: pos.coords.heading || 0.0,
+                  accuracy: accuracy
+                })
+              }).catch(err => console.log('Location update error:', err));
+            },
+            (err) => console.warn('Watch GPS error:', err),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+          );
+          trackBtn.classList.remove('btn-outline-success');
+          trackBtn.classList.add('btn-success', 'text-white');
+          if (trackText) trackText.innerHTML = '<i class="fas fa-spinner fa-pulse me-1"></i> Tracking Live';
+        }
+      });
+    }
+
+    // Auto-locate collector on page load — use live GPS as the default position
+    if (navigator.geolocation) {
+      locateCollectorLive(true);
+    }
+
+    // Allow collector to drag truck marker or click map to manually position their location
+    colMarker.options.draggable = true;
+    colMarker.on('dragend', function (e) {
+      const pos = colMarker.getLatLng();
+      setCollectorPositionManually(pos.lat, pos.lng);
+    });
+
+    map.on('contextmenu', function (e) {
+      setCollectorPositionManually(e.latlng.lat, e.latlng.lng);
+    });
+
+    function setCollectorPositionManually(lat, lng) {
+      currentCollectorLat = lat;
+      currentCollectorLng = lng;
+      colMarker.setLatLng([lat, lng]);
+      colMarker.bindPopup(`<b>🚚 Your Location Set</b><br>Manually pinned location<br><span class="badge bg-success mt-1">25 km Service Range Active</span>`).openPopup();
+
+      if (collectorRangeCircle) {
+        collectorRangeCircle.setLatLng([lat, lng]);
+      }
+
+      if (liveAccuracyCircle) {
+        liveAccuracyCircle.setLatLng([lat, lng]).setRadius(25);
+      }
+
+      const badge = document.getElementById('liveLocationAccuracyBadge');
+      const accuracyText = document.getElementById('accuracyText');
+      if (badge && accuracyText) {
+        badge.classList.remove('d-none');
+        accuracyText.textContent = `Pinned: ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      }
+
+      recalculateDistances(lat, lng);
+
+      // Persist to server
+      fetch('/api/maps/locations/update/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+          latitude: lat,
+          longitude: lng,
+          speed: 0.0,
+          heading: 0.0,
+          accuracy: 10
+        })
+      }).catch(err => console.log('Location sync:', err));
+    }
+
+    // Initialize with 25 km range filter
+    applyRangeFilter(MAX_COLLECTOR_RANGE_KM);
+
+    // 3. Radius Expansion Toolbar Event Handlers
+    const radiusBtns = document.querySelectorAll('#radiusToolbar .radius-btn');
+
+    radiusBtns.forEach(btn => {
+      btn.addEventListener('click', function () {
+        radiusBtns.forEach(b => {
+          b.classList.remove('active', 'btn-success', 'btn-warning', 'btn-primary');
+          b.classList.add('btn-outline-success');
+        });
+
+        this.classList.add('active');
+        this.classList.remove('btn-outline-success');
+        this.classList.add('btn-success');
+
+        const maxDist = parseFloat(this.getAttribute('data-max-dist')) || MAX_COLLECTOR_RANGE_KM;
+        applyRangeFilter(maxDist);
+      });
+    });
+
+    // 4. Real-Time GPS Tracking & Opportunity Recalculation
+    const gpsBtn = document.getElementById('getCollectorGpsBtn');
+    const gpsLabel = document.getElementById('gpsBtnLabel');
+    let collectorWatchId = null;
+
+    if (gpsBtn && navigator.geolocation) {
+      gpsBtn.addEventListener('click', function () {
+        if (collectorWatchId !== null) {
+          navigator.geolocation.clearWatch(collectorWatchId);
+          collectorWatchId = null;
+          gpsBtn.className = 'btn btn-sm btn-primary shadow-sm';
+          gpsLabel.textContent = 'Use Real-Time GPS';
+          return;
+        }
+
+        gpsLabel.textContent = 'Acquiring GPS...';
+        gpsBtn.className = 'btn btn-sm btn-warning shadow-sm';
+
+        collectorWatchId = navigator.geolocation.watchPosition(
+          function (pos) {
+            const liveLat = pos.coords.latitude;
+            const liveLng = pos.coords.longitude;
+            currentCollectorLat = liveLat;
+            currentCollectorLng = liveLng;
+
+            gpsLabel.textContent = 'Live GPS Active';
+            gpsBtn.className = 'btn btn-sm btn-success shadow-sm';
+
+            colMarker.setLatLng([liveLat, liveLng]);
+            if (collectorRangeCircle) {
+              collectorRangeCircle.setLatLng([liveLat, liveLng]);
+            }
+            map.setView([liveLat, liveLng], 13);
+
+            recalculateDistances(liveLat, liveLng);
+
+            // Persist location to backend
+            fetch('/api/maps/locations/update/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+              },
+              body: JSON.stringify({
+                latitude: liveLat,
+                longitude: liveLng,
+                speed: pos.coords.speed || 0.0,
+                heading: pos.coords.heading || 0.0
+              })
+            }).catch(() => {});
+          },
+          function (err) {
+            gpsLabel.textContent = 'GPS Denied / Error';
+            gpsBtn.className = 'btn btn-sm btn-outline-danger shadow-sm';
+            alert('Location access was denied or timed out. Please allow location permissions in your browser.');
+          },
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+        );
+      });
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (collectorWatchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(collectorWatchId);
+      }
+      map.remove();
+    });
+  });
+</script>
+{% endblock inline_javascript %}
