@@ -1,0 +1,979 @@
+{% extends "base_citizen.html" %}
+{% load static %}
+
+{% block title %}Citizen Dashboard | TrashPort{% endblock %}
+
+{% block css %}
+{{ block.super }}
+<style>
+  .dashboard-hero {
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 20px;
+    color: #0f172a;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 40px -10px rgba(5, 150, 105, 0.1);
+  }
+
+  .dashboard-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
+  }
+
+  .dashboard-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -50%;
+    left: -10%;
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
+    pointer-events: none;
+  }
+
+  .avatar-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+  }
+
+  .stat-card {
+    border-radius: 16px;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    background: linear-gradient(135deg, rgba(236, 253, 245, 0.7) 0%, rgba(255, 255, 255, 0.9) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 8px 30px -8px rgba(5, 150, 105, 0.08);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(5, 150, 105, 0.4);
+    box-shadow: 0 16px 36px -10px rgba(5, 150, 105, 0.15) !important;
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+  }
+
+  .icon-emerald {
+    background: #dcfce7;
+    color: #16a34a;
+  }
+
+  .icon-indigo {
+    background: #e0e7ff;
+    color: #4f46e5;
+  }
+
+  .icon-amber {
+    background: #fef3c7;
+    color: #d97706;
+  }
+
+  .icon-teal {
+    background: #ccfbf1;
+    color: #0d9488;
+  }
+
+  .nav-pills-custom .nav-link {
+    color: #64748b;
+    font-weight: 600;
+    padding: 0.7rem 1.25rem;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+  }
+
+  .nav-pills-custom .nav-link:hover {
+    background-color: #f1f5f9;
+    color: #1e293b;
+  }
+
+  .nav-pills-custom .nav-link.active {
+    background-color: #4f46e5;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  }
+
+  .pulse-badge {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulse 1.6s infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    }
+
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+  }
+
+  .table-custom th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-size: 0.825rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .plan-card {
+    border: 2px solid #e2e8f0;
+    border-radius: 14px;
+    transition: all 0.3s ease;
+  }
+
+  .plan-card.active-plan {
+    border-color: #4f46e5;
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  }
+
+  .plan-card:hover {
+    border-color: #818cf8;
+    transform: translateY(-4px);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="dashboard-hero p-4 p-md-5 mb-4 shadow">
+    <div class="row align-items-center position-relative" style="z-index: 2;">
+      <div class="col-lg-7 mb-4 mb-lg-0">
+        <div class="d-flex align-items-center gap-3">
+          <div class="avatar-circle">
+            {{ request.user.email|slice:":1"|upper }}
+          </div>
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span
+                class="badge bg-success bg-opacity-20 text-success px-3 py-1 rounded-pill fw-semibold border border-success border-opacity-25">
+                <i class="bi bi-shield-check me-1"></i> Citizen Account
+              </span>
+              <span
+                class="badge bg-primary bg-opacity-20 text-primary px-3 py-1 rounded-pill fw-semibold border border-primary border-opacity-25">
+                <i class="bi bi-star-fill me-1"></i> Pay-As-You-Pickup
+              </span>
+            </div>
+            <h1 class="h2 mb-1 fw-bold">Welcome back, {{ request.user.name|default:request.user.email }}!</h1>
+            <p class="text-white-50 mb-0">Manage your smart waste collection requests, track wallet points, and view pickup rates.</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5 text-lg-end d-flex flex-wrap justify-content-lg-end gap-2">
+        <!-- Primary Action: Dispatch / Add new pickup request for citizen -->
+        <a href="{% url 'waste_management:pickup_create' %}" class="btn btn-primary btn-lg px-4 shadow-sm fw-bold" id="btn-add-pickup-request">
+          <i class="bi bi-plus-circle me-2"></i>Add Pickup Request
+        </a>
+        <a href="{% url 'waste_management:address_create' %}" class="btn btn-outline-light btn-lg px-3">
+          <i class="bi bi-geo-alt me-1"></i>Add Address
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <!-- Wallet Points -->
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'citizens:wallet' %}" class="text-decoration-none" style="display:block;">
+        <div class="card stat-card h-100 p-3" style="cursor:pointer;transition:transform .18s,box-shadow .18s;" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <span class="text-uppercase text-muted fw-bold small">Wallet Points</span>
+              <h2 class="display-6 fw-bold mb-0 text-dark mt-1">{{ request.user.wallet_points }}</h2>
+            </div>
+            <div class="stat-icon icon-emerald">
+              <i class="bi bi-wallet2"></i>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-1 text-success small mt-2">
+            <i class="bi bi-lightning-charge-fill"></i>
+            <span>Click to view history & redeem</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+
+    <!-- Active Plan -->
+    <div class="col-sm-6 col-lg-3">
+      <div class="card stat-card h-100 p-3" style="cursor:pointer;" onclick="switchTab('plans-tab')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="text-uppercase text-muted fw-bold small">Active Plan</span>
+            <h5 class="fw-bold mb-0 text-dark mt-1">Pay-As-You-Pickup</h5>
+          </div>
+          <div class="stat-icon icon-indigo">
+            <i class="bi bi-gem"></i>
+          </div>
+        </div>
+        <div class="small mt-2">
+          <span class="text-primary fw-semibold">Charged per kg by category &rarr;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Requests & Action Items -->
+    <div class="col-sm-6 col-lg-3">
+      <div class="card stat-card h-100 p-3" style="cursor:pointer;" onclick="switchTab('active-pickups-tab')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="text-uppercase text-muted fw-bold small">Pickup Status</span>
+            <h2 class="display-6 fw-bold mb-0 text-dark mt-1">{{ active_count }}</h2>
+          </div>
+          <div class="stat-icon icon-amber">
+            <i class="bi bi-truck"></i>
+          </div>
+        </div>
+        <div class="small mt-2">
+          {% if pending_payment_count > 0 %}
+          <span class="badge bg-danger"><i class="bi bi-exclamation-circle me-1"></i>{{ pending_payment_count }} Awaiting Payment</span>
+          {% else %}
+          <span class="text-muted"><i class="bi bi-check-circle me-1"></i>All payments up to date</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Eco Impact & Total Recycled -->
+    <div class="col-sm-6 col-lg-3">
+      <div class="card stat-card h-100 p-3" style="cursor:pointer;" onclick="switchTab('history-tab')" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.12)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <span class="text-uppercase text-muted fw-bold small">Total Recycled</span>
+            <h2 class="display-6 fw-bold mb-0 text-dark mt-1">{{ total_recycled_kg|floatformat:1 }} <span class="fs-6 text-muted">kg</span></h2>
+          </div>
+          <div class="stat-icon icon-teal">
+            <i class="bi bi-recycle"></i>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-1 text-teal small mt-2" style="color: #0d9488;">
+          <i class="bi bi-tree-fill"></i>
+          <span>Eco-hero! {{ completed_count }} pickups</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 pt-3 pb-0">
+      <ul class="nav nav-pills nav-pills-custom gap-2 border-bottom pb-3" id="dashboardTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="active-pickups-tab" data-bs-toggle="tab"
+            data-bs-target="#active-pickups-panel" type="button" role="tab">
+            <i class="bi bi-clock-history me-2"></i>Pickup Status
+            {% if active_count > 0 %}
+            <span class="badge bg-primary rounded-pill ms-2">{{ active_count }}</span>
+            {% endif %}
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="plans-tab" data-bs-toggle="tab" data-bs-target="#plans-panel" type="button"
+            role="tab">
+            <i class="bi bi-tag me-2"></i>Pickup Rates
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="addresses-tab" data-bs-toggle="tab" data-bs-target="#addresses-panel"
+            type="button" role="tab">
+            <i class="bi bi-geo-alt me-2"></i>Saved Addresses
+            <span class="badge bg-secondary rounded-pill ms-2">{{ address_count }}</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history-panel" type="button"
+            role="tab">
+            <i class="bi bi-journal-check me-2"></i>Pickup History
+            <span class="badge bg-secondary rounded-pill ms-2">{{ history_count|default:completed_count }}</span>
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="invoices-tab" data-bs-toggle="tab" data-bs-target="#invoices-panel"
+            type="button" role="tab">
+            <i class="bi bi-receipt me-2"></i>Invoices &amp; Payments
+            {% if invoice_count > 0 %}
+            <span class="badge bg-secondary rounded-pill ms-2">{{ invoice_count }}</span>
+            {% endif %}
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="complaints-tab" data-bs-toggle="tab" data-bs-target="#complaints-panel"
+            type="button" role="tab">
+            <i class="bi bi-exclamation-triangle me-2"></i>Complaints
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="notifications-tab" data-bs-toggle="tab" data-bs-target="#notifications-panel"
+            type="button" role="tab">
+            <i class="bi bi-bell me-2"></i>Notifications
+            {% if unread_notifications_count > 0 %}
+            <span class="badge bg-danger rounded-pill ms-2">{{ unread_notifications_count }}</span>
+            {% endif %}
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card-body p-4">
+      <div class="tab-content" id="dashboardTabsContent">
+
+        <!-- TAB 1: ACTIVE PICKUPS -->
+        <div class="tab-pane fade show active" id="active-pickups-panel" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">Ongoing & Pending Requests</h5>
+              <p class="text-muted small mb-0">Track live collection updates and process pending fees.</p>
+            </div>
+            <a href="{% url 'waste_management:pickup_create' %}" class="btn btn-sm btn-primary">
+              <i class="bi bi-plus me-1"></i>New Pickup
+            </a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-custom table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Category</th>
+                  <th>Est. Weight</th>
+                  <th>Collection Fee</th>
+                  <th>Rewards</th>
+                  <th>Scheduled Time</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pickup in active_pickups %}
+                <tr>
+                  <td>
+                    <span class="fw-bold text-dark">#{{ pickup.display_id }}</span>
+                  </td>
+                  <td>
+                    <span class="fw-semibold">{{ pickup.category.name }}</span>
+                    {% if pickup.quantity_estimate %}
+                    <div class="small text-muted">{{ pickup.quantity_estimate }}</div>
+                    {% endif %}
+                  </td>
+                  <td>{{ pickup.weight_kg }} kg</td>
+                  <td>
+                    {% if pickup.fee > 0 %}
+                    <span class="fw-bold text-dark">Rs. {{ pickup.fee }}</span>
+                    {% else %}
+                    <span class="badge bg-success bg-opacity-10 text-success fw-bold">Free</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if pickup.points_earned > 0 %}
+                    <span class="badge bg-warning bg-opacity-20 text-dark border border-warning fw-bold">
+                      +{{ pickup.points_earned }} pts
+                    </span>
+                    {% else %}
+                    <span class="text-muted small">0 pts</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="fw-semibold text-dark"><i class="bi bi-calendar-event me-1 text-muted"></i>{{ pickup.schedule_date|date:"M d, Y" }}</div>
+                    <div class="small text-muted">{{ pickup.schedule_date|date:"h:i A" }}</div>
+                  </td>
+                  <td>
+                    {% if pickup.status == 'AWAITING_PAYMENT' %}
+                    <span class="badge bg-danger p-2"><i class="bi bi-credit-card me-1"></i>Awaiting Payment</span>
+                    {% elif pickup.status == 'PENDING' %}
+                    <span class="badge bg-warning text-dark p-2"><i class="bi bi-hourglass-split me-1"></i>Pending Assignment</span>
+                    {% elif pickup.status == 'ASSIGNED' %}
+                    <span class="badge bg-primary p-2"><i class="bi bi-person-check me-1"></i>Collector Assigned</span>
+                    {% elif pickup.status == 'IN_TRANSIT' %}
+                    <span class="badge bg-info text-dark p-2">
+                      <span class="pulse-badge me-1"></span>In Transit
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary p-2">{{ pickup.status }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="d-inline-flex gap-1 align-items-center">
+                      {% if pickup.is_paid %}
+                      <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank"
+                        class="btn btn-sm btn-outline-success" title="Download Tax Invoice">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>Invoice
+                      </a>
+                      {% endif %}
+                      <a href="{% url 'waste_management:pickup_detail' pickup.id %}"
+                        class="btn btn-sm btn-outline-secondary">
+                        Details
+                      </a>
+                      {% if pickup.status == 'AWAITING_PAYMENT' %}
+                      <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="pay">
+                        <button type="submit" class="btn btn-sm btn-success fw-bold shadow-sm">
+                          <i class="bi bi-credit-card-fill me-1"></i>Pay Rs. {{ pickup.fee }}
+                        </button>
+                      </form>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center py-5">
+                    <div class="py-4">
+                      <i class="bi bi-inbox display-4 text-muted opacity-50 mb-3 d-block"></i>
+                      <h6 class="fw-bold text-dark">No Active Pickup Requests</h6>
+                      <p class="text-muted small mb-3">You don't have any pending or active waste collections right now.</p>
+                      <a href="{% url 'waste_management:pickup_create' %}" class="btn btn-primary px-4">
+                        <i class="bi bi-plus-circle me-1"></i>Book a Pickup Now
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 2: PICKUP RATES -->
+        <div class="tab-pane fade" id="plans-panel" role="tabpanel">
+          <div class="mb-4">
+            <h5 class="fw-bold mb-1">Pay-As-You-Pickup Pricing Rates</h5>
+            <p class="text-muted small">Standard collection rates per kg and reward points earned for each waste category.</p>
+          </div>
+
+          <div class="row g-4">
+            {% for category in waste_categories %}
+            <div class="col-md-4">
+              <div class="plan-card h-100 p-4 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0 text-dark">{{ category.name }}</h5>
+                    <span class="badge bg-secondary text-uppercase small">{{ category.name }}</span>
+                  </div>
+                  <div class="mb-3">
+                    <span class="display-6 fw-bold text-primary">Rs. {{ category.fee_per_kg }}</span>
+                    <span class="text-muted">/ kg</span>
+                  </div>
+                  <p class="text-muted small mb-4">{{ category.description|default:"Standard waste collection rate applies." }}</p>
+                  <ul class="list-unstyled text-muted small gap-2 d-flex flex-column mb-4">
+                    <li class="d-flex align-items-center"><i class="bi bi-check-circle-fill text-success me-2"></i>Pay-As-You-Pickup</li>
+                    <li class="d-flex align-items-center"><i class="bi bi-check-circle-fill text-success me-2"></i>Rewarding recycling incentives</li>
+                  </ul>
+                </div>
+
+                <div class="mt-3 pt-3 border-top border-light d-flex align-items-center justify-content-between">
+                  <span class="text-success small fw-semibold">
+                    <i class="bi bi-star-fill me-1"></i>Rewards
+                  </span>
+                  <span class="badge bg-success bg-opacity-10 text-success fw-bold">+{{ category.points_per_kg }} pts/kg</span>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center text-muted py-5">
+              <i class="bi bi-tag display-4 text-muted opacity-50 mb-3 d-block"></i>
+              <p>No pricing categories configured.</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- TAB 3: SAVED ADDRESSES -->
+        <div class="tab-pane fade" id="addresses-panel" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h5 class="fw-bold mb-1">Your Saved Addresses</h5>
+              <p class="text-muted small mb-0">Manage collection points for fast scheduling.</p>
+            </div>
+            <a href="{% url 'waste_management:address_create' %}" class="btn btn-sm btn-primary">
+              <i class="bi bi-plus me-1"></i>Add New Address
+            </a>
+          </div>
+
+          <div class="row g-3">
+            {% for addr in addresses %}
+            <div class="col-md-6 col-lg-4">
+              <div class="card h-100 border p-3 shadow-sm">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-geo-alt-fill text-primary fs-5"></i>
+                    <h6 class="fw-bold mb-0 text-dark">{{ addr.city }}, {{ addr.state }}</h6>
+                  </div>
+                  {% if addr.is_default %}
+                  <span
+                    class="badge bg-success bg-opacity-20 text-success fw-semibold border border-success border-opacity-25">Default</span>
+                  {% endif %}
+                </div>
+                <p class="text-muted small mb-3">
+                  {{ addr.address_line1 }}
+                  {% if addr.address_line2 %}, {{ addr.address_line2 }}{% endif %}<br>
+                  PIN: {{ addr.postal_code }}
+                </p>
+                <div class="d-flex justify-content-end gap-2 mt-auto pt-2 border-top">
+                  <a href="{% url 'waste_management:address_update' addr.id %}"
+                    class="btn btn-sm btn-outline-secondary">Edit</a>
+                  <a href="{% url 'waste_management:address_delete' addr.id %}"
+                    class="btn btn-sm btn-outline-danger">Delete</a>
+                </div>
+              </div>
+            </div>
+            {% empty %}
+            <div class="col-12 text-center py-5">
+              <i class="bi bi-geo-alt display-4 text-muted opacity-50 mb-3 d-block"></i>
+              <h6 class="fw-bold text-dark">No Saved Addresses Found</h6>
+              <p class="text-muted small mb-3">Add your home or office address to start booking waste pickups.</p>
+              <a href="{% url 'waste_management:address_create' %}" class="btn btn-primary px-4">
+                <i class="bi bi-plus-circle me-1"></i>Add Your First Address
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- TAB 4: PICKUP HISTORY -->
+        <div class="tab-pane fade" id="history-panel" role="tabpanel">
+          <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">Pickup History</h5>
+              <p class="text-muted small mb-0">Record of all completed and cancelled waste collections.</p>
+            </div>
+            <!-- Filter Pills -->
+            <div class="btn-group btn-group-sm" role="group" id="historyFilterGroup" aria-label="Pickup history filters">
+              <button type="button" class="btn btn-outline-primary active" data-filter="all">
+                All <span class="badge bg-primary text-white ms-1">{{ history_count|default:"0" }}</span>
+              </button>
+              <button type="button" class="btn btn-outline-success" data-filter="COMPLETED">
+                Completed <span class="badge bg-success text-white ms-1">{{ completed_count|default:"0" }}</span>
+              </button>
+              <button type="button" class="btn btn-outline-danger" data-filter="CANCELLED">
+                Cancelled <span class="badge bg-danger text-white ms-1">{{ cancelled_count|default:"0" }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-custom table-hover align-middle mb-0" id="historyTable">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Waste Category</th>
+                  <th>Weight (kg)</th>
+                  <th>Fee Paid</th>
+                  <th>Status</th>
+                  <th>Date &amp; Details</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pickup in history_pickups %}
+                <tr class="history-row" data-status="{{ pickup.status }}">
+                  <td><span class="fw-bold text-dark">#{{ pickup.display_id }}</span></td>
+                  <td>{{ pickup.category.name }}</td>
+                  <td>{{ pickup.weight_kg }} kg</td>
+                  <td>
+                    {% if pickup.fee > 0 %}
+                      Rs. {{ pickup.fee }}
+                      {% if pickup.status == 'CANCELLED' and pickup.is_paid %}
+                        <div class="small text-danger fw-semibold" style="font-size:0.75rem;">
+                          <i class="fas fa-undo-alt me-1"></i>Refund in 3–7 days
+                        </div>
+                      {% endif %}
+                    {% else %}
+                      <span class="badge bg-success bg-opacity-10 text-success">Free</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if pickup.status == 'COMPLETED' %}
+                      <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                    {% elif pickup.status == 'CANCELLED' %}
+                      <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Cancelled</span>
+                    {% else %}
+                      <span class="badge bg-secondary">{{ pickup.get_status_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if pickup.status == 'COMPLETED' %}
+                      <div><i class="bi bi-calendar-check me-1 text-muted"></i>{{ pickup.schedule_date|date:"M d, Y" }}</div>
+                      {% if pickup.points_earned %}
+                        <div class="badge bg-warning bg-opacity-20 text-dark fw-bold mt-1">+{{ pickup.points_earned }} pts</div>
+                      {% endif %}
+                    {% elif pickup.status == 'CANCELLED' %}
+                      <div><i class="bi bi-calendar-x me-1 text-muted"></i>{{ pickup.cancelled_at|default:pickup.updated_at|date:"M d, Y" }}</div>
+                      {% if pickup.cancellation_reason %}
+                        <div class="small text-muted text-truncate mt-1" style="max-width: 220px;" title="{{ pickup.cancellation_reason }}">
+                          <i class="fas fa-info-circle me-1 text-secondary"></i>"{{ pickup.cancellation_reason }}"
+                        </div>
+                      {% endif %}
+                    {% else %}
+                      <div>{{ pickup.schedule_date|date:"M d, Y" }}</div>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <div class="d-inline-flex gap-1 align-items-center">
+                      {% if pickup.status == 'COMPLETED' and pickup.is_paid %}
+                      <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank"
+                        class="btn btn-sm btn-outline-success" title="Download Official Tax Invoice">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>Invoice
+                      </a>
+                      {% endif %}
+                      <a href="{% url 'waste_management:pickup_detail' pickup.id %}"
+                        class="btn btn-sm btn-outline-secondary">
+                        Details
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr id="noHistoryRow">
+                  <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bi bi-journal-x display-4 text-muted opacity-50 mb-3 d-block"></i>
+                    No completed or cancelled pickup requests in your history yet.
+                  </td>
+                </tr>
+                {% endfor %}
+                <tr id="noFilteredHistoryRow" style="display:none;">
+                  <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bi bi-funnel display-4 text-muted opacity-50 mb-3 d-block"></i>
+                    No requests matching the selected filter.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 5: INVOICES & PAYMENTS -->
+        <div class="tab-pane fade" id="invoices-panel" role="tabpanel">
+          <div class="mb-3">
+            <h5 class="fw-bold mb-1">Payment Invoices &amp; Receipts</h5>
+            <p class="text-muted small">Official tax invoices and digital payment receipts for all collection services.</p>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-custom table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Invoice No.</th>
+                  <th>Pickup Reference</th>
+                  <th>Waste Stream</th>
+                  <th>Payment Date</th>
+                  <th class="text-end">Amount Paid</th>
+                  <th class="text-center">Status</th>
+                  <th class="text-end">Invoice Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pickup in paid_pickups %}
+                <tr>
+                  <td>
+                    <span class="font-monospace fw-bold text-primary">INV-{{ pickup.created_at|date:"Y" }}-{{ pickup.id|stringformat:"05d" }}</span>
+                  </td>
+                  <td>
+                    <span class="fw-semibold text-dark">Pickup #{{ pickup.display_id }}</span>
+                    <div class="small text-muted">{{ pickup.schedule_date|date:"M d, Y" }}</div>
+                  </td>
+                  <td>
+                    <span class="badge bg-light text-dark border">{{ pickup.category.name }}</span>
+                    <span class="small text-muted ms-1">({{ pickup.weight_kg }} kg)</span>
+                  </td>
+                  <td>
+                    <div class="text-dark"><i class="bi bi-calendar3 me-1 text-muted"></i>{{ pickup.updated_at|date:"M d, Y" }}</div>
+                    <div class="small text-muted">{{ pickup.updated_at|date:"h:i A" }}</div>
+                  </td>
+                  <td class="text-end fw-bold text-dark">
+                    Rs. {{ pickup.fee|floatformat:2 }}
+                  </td>
+                  <td class="text-center">
+                    <span class="badge bg-success bg-opacity-20 text-success fw-semibold border border-success border-opacity-25">
+                      <i class="bi bi-check-circle me-1"></i>Paid
+                    </span>
+                  </td>
+                  <td class="text-end">
+                    <div class="d-inline-flex gap-1">
+                      <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank"
+                        class="btn btn-sm btn-success fw-semibold text-white shadow-sm">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i>Download Invoice
+                      </a>
+                      <a href="{% url 'waste_management:pickup_detail' pickup.id %}"
+                        class="btn btn-sm btn-outline-secondary">
+                        Details
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bi bi-receipt display-4 text-muted opacity-50 mb-3 d-block"></i>
+                    <h6 class="fw-bold text-dark">No Invoices Available Yet</h6>
+                    <p class="text-muted small mb-0">Invoices and payment receipts will be automatically generated whenever you pay a collection fee.</p>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 6: COMPLAINTS -->
+        <div class="tab-pane fade" id="complaints-panel" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">Support & Complaints</h5>
+              <p class="text-muted small mb-0">Report issues regarding delayed pickups or missed services.</p>
+            </div>
+            <a href="{% url 'waste_management:complaint_create' %}" class="btn btn-sm btn-outline-danger">
+              <i class="bi bi-exclamation-circle me-1"></i>File New Complaint
+            </a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-custom table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Ticket ID</th>
+                  <th>Issue Title</th>
+                  <th>Related Pickup</th>
+                  <th>Status</th>
+                  <th>Date Filed</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for complaint in complaints %}
+                <tr>
+                  <td><span class="fw-bold text-dark">#{{ complaint.id }}</span></td>
+                  <td class="fw-semibold text-dark">{{ complaint.title }}</td>
+                  <td>
+                    {% if complaint.pickup_request %}
+                    <a href="{% url 'waste_management:pickup_detail' complaint.pickup_request.id %}"
+                      class="text-decoration-none fw-semibold">
+                      #{{ complaint.pickup_request.id }}
+                    </a>
+                    {% else %}
+                    <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if complaint.status == 'PENDING' %}
+                    <span class="badge bg-warning text-dark p-2"><i class="bi bi-clock me-1"></i>Pending Review</span>
+                    {% else %}
+                    <span class="badge bg-success p-2"><i class="bi bi-check-circle me-1"></i>Resolved</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ complaint.created_at|date:"M d, Y" }}</td>
+                  <td class="text-end">
+                    <a href="{% url 'waste_management:complaint_detail' complaint.id %}"
+                      class="btn btn-sm btn-outline-secondary">
+                      View Ticket
+                    </a>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center py-5 text-muted">
+                    <i class="bi bi-shield-check display-4 text-success opacity-50 mb-3 d-block"></i>
+                    No complaints registered. Everything is running smoothly!
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TAB 7: NOTIFICATIONS -->
+        <div class="tab-pane fade" id="notifications-panel" role="tabpanel">
+          <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">Recent Notifications &amp; Alerts</h5>
+              <p class="text-muted small mb-0">Updates on your pickups, payments, invoices, and service notices.</p>
+            </div>
+            {% if notifications %}
+            <div class="d-flex align-items-center gap-2" id="notif-action-buttons">
+              <button type="button" class="btn btn-sm btn-outline-primary shadow-sm" id="btn-mark-all-read" onclick="markAllNotificationsRead()">
+                <i class="bi bi-check-all me-1"></i>Mark All Read
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger shadow-sm" id="btn-clear-notifications" onclick="clearAllNotifications()">
+                <i class="bi bi-trash3 me-1"></i>Clear Notifications
+              </button>
+            </div>
+            {% endif %}
+          </div>
+          <div class="list-group shadow-sm border-0" id="notification-list-group">
+            {% for notif in notifications %}
+            <div class="list-group-item list-group-item-action p-3 mb-2 rounded border notif-item {% if not notif.is_read %}border-primary bg-light notif-unread{% endif %}" id="notif-item-{{ notif.id }}">
+              <div class="d-flex w-100 justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                  {% if notif.notification_type == 'PICKUP' %}
+                    <span class="badge bg-primary"><i class="bi bi-truck me-1"></i>Pickup</span>
+                  {% elif notif.notification_type == 'PAYMENT' %}
+                    <span class="badge bg-success"><i class="bi bi-credit-card me-1"></i>Payment</span>
+                  {% elif notif.notification_type == 'COMPLAINT' %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Complaint</span>
+                  {% else %}
+                    <span class="badge bg-secondary"><i class="bi bi-bell me-1"></i>System</span>
+                  {% endif %}
+                  <h6 class="mb-0 fw-bold text-dark">{{ notif.title }}</h6>
+                </div>
+                <small class="text-muted">{{ notif.created_at|date:"M d, Y h:i A" }}</small>
+              </div>
+              <p class="mb-1 mt-2 text-secondary">{{ notif.message }}</p>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-muted" id="no-notif-empty-state">
+              <i class="bi bi-bell-slash display-4 text-muted opacity-50 mb-3 d-block"></i>
+              No notifications yet. You'll receive real-time updates as your pickups and payments progress!
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function switchTab(tabId) {
+    var tabBtn = document.getElementById(tabId);
+    if (tabBtn) {
+      var tab = new bootstrap.Tab(tabBtn);
+      tab.show();
+    }
+  }
+
+  function markAllNotificationsRead() {
+    const btn = document.getElementById("btn-mark-all-read");
+    if (btn) btn.disabled = true;
+    fetch("{% url 'notifications:mark_all_read' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "Content-Type": "application/json"
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "success") {
+        document.querySelectorAll(".notif-item").forEach(item => {
+          item.classList.remove("border-primary", "bg-light", "notif-unread");
+        });
+        const badge = document.querySelector("#notifications-tab .badge");
+        if (badge) badge.remove();
+        if (btn) {
+          btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>All Read';
+        }
+      }
+    })
+    .catch(err => console.error("Error marking notifications as read:", err))
+    .finally(() => {
+      if (btn) btn.disabled = false;
+    });
+  }
+
+  function clearAllNotifications() {
+    if (!confirm("Are you sure you want to clear all notifications?")) return;
+    const btn = document.getElementById("btn-clear-notifications");
+    if (btn) btn.disabled = true;
+    fetch("{% url 'notifications:clear_all' %}", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "Content-Type": "application/json"
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "success") {
+        const listGroup = document.getElementById("notification-list-group");
+        if (listGroup) {
+          listGroup.innerHTML = `
+            <div class="text-center py-5 text-muted" id="no-notif-empty-state">
+              <i class="bi bi-bell-slash display-4 text-muted opacity-50 mb-3 d-block"></i>
+              No notifications yet. You'll receive real-time updates as your pickups and payments progress!
+            </div>
+          `;
+        }
+        const actionBtns = document.getElementById("notif-action-buttons");
+        if (actionBtns) actionBtns.remove();
+        const badge = document.querySelector("#notifications-tab .badge");
+        if (badge) badge.remove();
+      }
+    })
+    .catch(err => console.error("Error clearing notifications:", err))
+    .finally(() => {
+      if (btn) btn.disabled = false;
+    });
+  }
+  // -------------------------------------------------------------------------------------------------------- History Filter Functionality --------------------------------------------------------------------------------------------------------
+  document.querySelectorAll("#historyFilterGroup button").forEach(btn => {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll("#historyFilterGroup button").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+      const filter = this.dataset.filter;
+      const rows = document.querySelectorAll("#historyTable .history-row");
+      let visibleCount = 0;
+
+      rows.forEach(row => {
+        const rowStatus = row.dataset.status;
+        if (filter === "all" || rowStatus === filter) {
+          row.style.display = "";
+          visibleCount++;
+        } else {
+          row.style.display = "none";
+        }
+      });
+
+      const noMatchRow = document.getElementById("noFilteredHistoryRow");
+      if (noMatchRow) {
+        if (rows.length > 0 && visibleCount === 0) {
+          noMatchRow.style.display = "";
+        } else {
+          noMatchRow.style.display = "none";
+        }
+      }
+    });
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,464 @@
+{% extends "base_citizen.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Edit Address{% else %}New Address{% endif %} | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-10 col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h3 mb-2 text-success fw-bold">
+          <i class="fas fa-map-marker-alt me-2"></i>{% if object %}Edit Address{% else %}Add New Saved Address{% endif %}
+        </h1>
+        <p class="text-muted mb-4">Set your precise pickup coordinates on the map or enter your address details below.</p>
+
+        <form method="post">
+          {% csrf_token %}
+
+          <!-- 1. Interactive Map Section (Automatic Geocoding Enabled) -->
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <h5 class="fw-bold text-dark mb-0">
+                <i class="fas fa-map-marked-alt text-primary me-2"></i>1. Pick Location on Map
+              </h5>
+              <button type="button" id="useCurrentLocBtn" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-location-arrow me-1"></i> Use My Current Location
+              </button>
+            </div>
+
+            <!-- Manual Search Bar with Scrollable Results -->
+            <div class="mb-3 position-relative" id="addressSearchWrapper">
+              <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                  <i class="fas fa-search-location text-success"></i>
+                </span>
+                <input type="text"
+                       id="manualAddressSearchInput"
+                       class="form-control border-start-0 border-end-0 ps-1"
+                       placeholder="Enter street, landmark, area, or city (e.g. MG Road, Indiranagar)..."
+                       autocomplete="off">
+                <button type="button" id="clearAddressSearchBtn" class="btn btn-outline-secondary border-start-0 border-end-0 bg-white d-none text-muted" title="Clear">
+                  <i class="fas fa-times"></i>
+                </button>
+                <button type="button"
+                        id="btnRunAddressSearch"
+                        class="btn btn-dark fw-bold px-3 d-flex align-items-center gap-1.5"
+                        style="background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;">
+                  <i class="fas fa-search"></i>
+                  <span>Manual Search</span>
+                </button>
+              </div>
+
+              <!-- Scrollable Search Results Dropdown -->
+              <div id="addressSearchResultsList"
+                   class="list-group position-absolute w-100 shadow-lg border rounded-3 mt-1 d-none overflow-auto"
+                   style="max-height: 240px; z-index: 1050; background: #ffffff; scrollbar-width: thin;">
+              </div>
+            </div>
+
+            <!-- Leaflet map container -->
+            <div id="mapPicker" class="mb-2 shadow-sm" style="height: 380px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;"></div>
+            <div class="d-flex justify-content-between align-items-center text-muted small mb-3">
+              <div>Selected Coordinates: <strong id="coordsDisplay" class="text-dark">9.931200, 76.267300</strong></div>
+              <div id="geocodeStatus" class="badge bg-success-subtle text-success border border-success-subtle">
+                <i class="fas fa-check-circle me-1"></i> Auto Map Geocoding Active
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Address Details Form Section -->
+          <div class="p-3 bg-light rounded-3 border mb-4">
+            <h5 class="fw-bold text-dark mb-3">
+              <i class="fas fa-building text-success me-2"></i>2. Address Details
+            </h5>
+
+            <div class="mb-3">
+              <label for="id_address_line1" class="form-label fw-bold small text-dark">Street Address / Landmark:*</label>
+              {{ form.address_line1 }}
+              {% if form.address_line1.errors %}
+                <div class="text-danger small mt-1">{{ form.address_line1.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label for="id_address_line2" class="form-label fw-bold small text-dark">Apartment, Suite, Unit (Optional):</label>
+              {{ form.address_line2 }}
+              {% if form.address_line2.errors %}
+                <div class="text-danger small mt-1">{{ form.address_line2.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <label for="id_city" class="form-label fw-bold small text-dark">City:*</label>
+                {{ form.city }}
+                {% if form.city.errors %}
+                  <div class="text-danger small mt-1">{{ form.city.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label for="id_state" class="form-label fw-bold small text-dark">State:*</label>
+                {{ form.state }}
+                {% if form.state.errors %}
+                  <div class="text-danger small mt-1">{{ form.state.errors.0 }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label for="id_postal_code" class="form-label fw-bold small text-dark">Postal Code:*</label>
+                {{ form.postal_code }}
+                {% if form.postal_code.errors %}
+                  <div class="text-danger small mt-1">{{ form.postal_code.errors.0 }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="form-check mt-3">
+              {{ form.is_default }}
+              <label for="id_is_default" class="form-check-label fw-bold small text-dark ms-1">
+                Set as my default pickup address
+              </label>
+            </div>
+
+            <!-- Hidden Lat / Lng inputs -->
+            {{ form.latitude }}
+            {{ form.longitude }}
+          </div>
+
+          <div class="mt-4 d-flex gap-2 border-top pt-3">
+            <button type="submit" class="btn btn-success btn-lg px-4 shadow-sm fw-bold">
+              <i class="fas fa-save me-1"></i> Save Address
+            </button>
+            <a href="{% url 'waste_management:address_list' %}" class="btn btn-outline-secondary btn-lg px-4">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block inline_javascript %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      let latInput = document.getElementById("id_latitude");
+      let lngInput = document.getElementById("id_longitude");
+      let coordsDisplay = document.getElementById("coordsDisplay");
+
+      let addressLineInput = document.getElementById("id_address_line1");
+      let cityInput = document.getElementById("id_city");
+      let stateInput = document.getElementById("id_state");
+      let postalInput = document.getElementById("id_postal_code");
+
+      let defaultLat = parseFloat(latInput?.value) || 9.9312;
+      let defaultLng = parseFloat(lngInput?.value) || 76.2673;
+
+      let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri'
+      });
+
+      let baseMaps = {
+        "📍 Street Map (OSM)": streetLayer,
+        "🛰️ Satellite View": satelliteLayer
+      };
+
+      let map = L.map('mapPicker', {
+        center: [defaultLat, defaultLng],
+        zoom: 15,
+        layers: [streetLayer]
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+      let accuracyCircle = null;
+
+      function reverseGeocode(lat, lng) {
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.address) {
+              let addr = data.address;
+              let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.subdistrict || addr.amenity || "";
+              let city = addr.city || addr.town || addr.village || addr.municipality || addr.county || addr.state_district || addr.city_district || "";
+              let state = addr.state || "";
+              let postcode = addr.postcode || "";
+
+              // AUTOMATICALLY fill/overwrite fields dynamically from pinned map location!
+              if (addressLineInput) {
+                if (road) addressLineInput.value = road;
+                else if (data.display_name) addressLineInput.value = data.display_name.split(',')[0];
+              }
+
+              if (cityInput && city) cityInput.value = city;
+              if (stateInput && state) stateInput.value = state;
+              if (postalInput && postcode) postalInput.value = postcode;
+            }
+          })
+          .catch(err => console.log("Reverse geocode notice:", err));
+      }
+
+      function updateCoords(lat, lng, fetchAddress = true) {
+        let formattedLat = lat.toFixed(6);
+        let formattedLng = lng.toFixed(6);
+        if (latInput) latInput.value = formattedLat;
+        if (lngInput) lngInput.value = formattedLng;
+        if (coordsDisplay) coordsDisplay.textContent = `${formattedLat}, ${formattedLng}`;
+
+        if (fetchAddress) {
+          reverseGeocode(lat, lng);
+        }
+      }
+
+      marker.on('dragend', function (e) {
+        let position = marker.getLatLng();
+        updateCoords(position.lat, position.lng, true);
+      });
+
+      map.on('click', function (e) {
+        marker.setLatLng(e.latlng);
+        updateCoords(e.latlng.lat, e.latlng.lng, true);
+      });
+
+      document.getElementById('useCurrentLocBtn')?.addEventListener('click', function () {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              let lat = pos.coords.latitude;
+              let lng = pos.coords.longitude;
+              let accuracy = pos.coords.accuracy || 15;
+
+              map.setView([lat, lng], 17);
+              marker.setLatLng([lat, lng]);
+
+              if (accuracyCircle) {
+                accuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+              } else {
+                accuracyCircle = L.circle([lat, lng], {
+                  radius: accuracy,
+                  color: '#16a34a',
+                  fillColor: '#22c55e',
+                  fillOpacity: 0.15,
+                  weight: 1.5
+                }).addTo(map);
+              }
+
+              updateCoords(lat, lng, true);
+            },
+            function (err) {
+              alert("Unable to fetch current GPS location. Please check browser permissions or select manually on the map.");
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            }
+          );
+        }
+      });
+
+      // Forward-geocoding in Manual Mode when user types
+      let debounceTimer;
+      function handleManualForwardGeocode() {
+        if (isAutoMode) return;
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          let street = addressLineInput?.value || "";
+          let city = cityInput?.value || "";
+          let state = stateInput?.value || "";
+          let post = postalInput?.value || "";
+
+          let query = [street, city, state, post].filter(Boolean).join(", ");
+          if (query.length > 3) {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`)
+              .then(res => res.json())
+              .then(data => {
+                if (data && data.length > 0) {
+                  let lat = parseFloat(data[0].lat);
+                  let lng = parseFloat(data[0].lon);
+                  map.setView([lat, lng], 16);
+                  marker.setLatLng([lat, lng]);
+                  updateCoords(lat, lng, false);
+                }
+              })
+              .catch(err => {});
+          }
+        }, 800);
+      }
+
+      cityInput?.addEventListener('input', handleManualForwardGeocode);
+      postalInput?.addEventListener('input', handleManualForwardGeocode);
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      updateCoords(defaultLat, defaultLng, false);
+
+      // ==============================================================================
+      // MANUAL SEARCH WITH SCROLLABLE RESULTS FOR SAVED ADDRESS
+      // ==============================================================================
+      const manualAddressInput = document.getElementById("manualAddressSearchInput");
+      const btnRunAddressSearch = document.getElementById("btnRunAddressSearch");
+      const clearAddressSearchBtn = document.getElementById("clearAddressSearchBtn");
+      const addressSearchResultsList = document.getElementById("addressSearchResultsList");
+
+      let addressSearchDebounceTimer = null;
+
+      function renderAddressSearchResults(results) {
+        if (!addressSearchResultsList) return;
+        addressSearchResultsList.innerHTML = "";
+
+        if (!results || results.length === 0) {
+          addressSearchResultsList.innerHTML = `
+            <div class="p-3 text-center text-muted small">
+              <i class="fas fa-map-pin me-1 text-secondary"></i>No matching places found. Try another landmark or street name.
+            </div>
+          `;
+          addressSearchResultsList.classList.remove("d-none");
+          return;
+        }
+
+        results.forEach(item => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "list-group-item list-group-item-action py-2.5 px-3 text-start border-bottom d-flex align-items-start gap-2.5";
+          btn.innerHTML = `
+            <i class="fas fa-map-marker-alt text-success mt-1 flex-shrink-0"></i>
+            <div class="flex-grow-1 min-w-0">
+              <strong class="text-dark text-truncate d-block" style="font-size: 0.88rem;">${item.title}</strong>
+              <small class="text-muted d-block text-truncate" style="font-size: 0.78rem;">${item.subtitle}</small>
+            </div>
+          `;
+
+          btn.addEventListener("click", function () {
+            const lat = parseFloat(item.lat);
+            const lng = parseFloat(item.lng);
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            map.setView([lat, lng], 16);
+            marker.setLatLng([lat, lng]);
+
+            if (addressLineInput && item.street) addressLineInput.value = item.street;
+            if (cityInput && item.city) cityInput.value = item.city;
+            if (postalInput && item.postcode) postalInput.value = item.postcode;
+
+            updateCoords(lat, lng, true);
+
+            if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+            if (manualAddressInput) manualAddressInput.value = item.title;
+            if (clearAddressSearchBtn) clearAddressSearchBtn.classList.remove("d-none");
+
+            const mapEl = document.getElementById("mapPicker");
+            if (mapEl) mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+
+          addressSearchResultsList.appendChild(btn);
+        });
+
+        const footer = document.createElement("div");
+        footer.className = "py-1.5 px-3 bg-light border-top text-center text-muted small";
+        footer.style.fontSize = "0.72rem";
+        footer.innerHTML = '<i class="fas fa-arrows-alt-v me-1 text-success"></i>Scroll to explore all ' + results.length + ' matching locations &bull; Click to set pin';
+        addressSearchResultsList.appendChild(footer);
+
+        addressSearchResultsList.classList.remove("d-none");
+      }
+
+      function executeAddressSearch() {
+        if (!manualAddressInput) return;
+        const query = manualAddressInput.value.trim();
+        if (query.length < 2) {
+          if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+          return;
+        }
+
+        fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`)
+          .then(res => res.json())
+          .then(data => {
+            const matches = [];
+            if (Array.isArray(data)) {
+              data.forEach(item => {
+                const addr = item.address || {};
+                const road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.amenity || item.name || "";
+                const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.state_district || "";
+                const postcode = addr.postcode || "";
+
+                matches.push({
+                  title: road || item.display_name.split(",")[0],
+                  subtitle: item.display_name,
+                  lat: parseFloat(item.lat),
+                  lng: parseFloat(item.lon),
+                  street: road || item.display_name.split(",")[0],
+                  city: cityName,
+                  postcode: postcode
+                });
+              });
+            }
+            renderAddressSearchResults(matches);
+          })
+          .catch(err => console.log("Address search notice:", err));
+      }
+
+      if (btnRunAddressSearch) {
+        btnRunAddressSearch.addEventListener("click", executeAddressSearch);
+      }
+
+      if (manualAddressInput) {
+        manualAddressInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            executeAddressSearch();
+          } else if (e.key === "Escape") {
+            if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+          }
+        });
+
+        manualAddressInput.addEventListener("input", function () {
+          const val = manualAddressInput.value.trim();
+          if (clearAddressSearchBtn) clearAddressSearchBtn.classList.toggle("d-none", val.length === 0);
+          clearTimeout(addressSearchDebounceTimer);
+          if (val.length >= 3) {
+            addressSearchDebounceTimer = setTimeout(executeAddressSearch, 450);
+          } else if (val.length === 0) {
+            if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+          }
+        });
+      }
+
+      if (clearAddressSearchBtn) {
+        clearAddressSearchBtn.addEventListener("click", function () {
+          if (manualAddressInput) {
+            manualAddressInput.value = "";
+            manualAddressInput.focus();
+          }
+          clearAddressSearchBtn.classList.add("d-none");
+          if (addressSearchResultsList) addressSearchResultsList.classList.add("d-none");
+        });
+      }
+
+      document.addEventListener("click", function (e) {
+        if (!addressSearchResultsList || addressSearchResultsList.classList.contains("d-none")) return;
+        const wrapper = document.getElementById("addressSearchWrapper");
+        if (wrapper && !wrapper.contains(e.target)) {
+          addressSearchResultsList.classList.add("d-none");
+        }
+      });
+    });
+  </script>
+{% endblock inline_javascript %}

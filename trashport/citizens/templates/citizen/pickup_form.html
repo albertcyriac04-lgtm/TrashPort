@@ -1,0 +1,1408 @@
+{% extends "base_citizen.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Book a Pickup | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-10 col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h3 mb-2 text-success fw-bold"><i class="fas fa-truck-pickup me-2"></i>Book Waste Pickup</h1>
+        <p class="text-muted mb-4">Set your pickup location on the map, enter your address, and select your category and schedule.</p>
+
+        <form method="post">
+          {% csrf_token %}
+
+          <!-- City Selection & Service Verification -->
+          <div class="p-3 bg-light rounded-3 border mb-4">
+            <div class="row align-items-center">
+              <div class="col-md-6">
+                <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                  <label class="form-label fw-bold text-dark mb-0">
+                    <i class="fas fa-city me-2 text-success"></i>Select City / Region:*
+                  </label>
+                  <button type="button"
+                          id="scrollToManualSearchBtn"
+                          class="btn btn-sm btn-dark py-0 px-2 fw-semibold d-inline-flex align-items-center gap-1 shadow-sm"
+                          style="font-size: 0.78rem; background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;"
+                          title="Open city search or search address on map">
+                    <i class="fas fa-search text-white"></i>
+                    <span>Manual Search</span>
+                  </button>
+                </div>
+
+                <!-- Searchable City Combobox Component -->
+                <div class="position-relative" id="cityComboboxWrapper">
+                  <!-- Hidden native select for standard Django form submission and tests -->
+                  <div class="visually-hidden">
+                    {{ form.city }}
+                  </div>
+
+                  <!-- Custom Combobox Trigger (Styled as a clean Bootstrap form-select) -->
+                  <button type="button"
+                          id="cityComboboxTrigger"
+                          class="form-select text-start d-flex justify-content-between align-items-center bg-white shadow-sm"
+                          style="cursor: pointer; background-image: none;"
+                          aria-expanded="false"
+                          aria-haspopup="listbox">
+                    <span id="cityComboboxSelectedLabel" class="text-truncate text-muted">
+                      Select City...
+                    </span>
+                    <span class="d-flex align-items-center gap-2 ms-2 text-secondary flex-shrink-0">
+                      <span id="cityComboboxClearBtn" class="d-none text-muted p-0 border-0 bg-transparent" title="Clear selection" style="cursor: pointer;">
+                        <i class="fas fa-times-circle text-danger"></i>
+                      </span>
+                      <i class="fas fa-chevron-down small text-muted" id="cityComboboxChevron"></i>
+                    </span>
+                  </button>
+
+                  <!-- Searchable & Scrollable Dropdown Menu -->
+                  <div id="cityComboboxMenu"
+                       class="dropdown-menu w-100 p-2.5 shadow-lg border rounded-3 mt-1 d-none"
+                       style="position: absolute; top: 100%; left: 0; z-index: 1060; background: #ffffff; min-width: 100%;">
+                    <!-- Search Input Bar -->
+                    <div class="input-group input-group-sm mb-2">
+                      <span class="input-group-text bg-light border-end-0 text-muted">
+                        <i class="fas fa-search text-success"></i>
+                      </span>
+                      <input type="text"
+                             id="cityComboboxSearchInput"
+                             class="form-control border-start-0 border-end-0 ps-1"
+                             placeholder="Search City, Panchayath or Hub (e.g. Kochi, Aluva)..."
+                             autocomplete="off">
+                      <button type="button"
+                              id="cityComboboxSearchClearBtn"
+                              class="btn btn-outline-secondary border-start-0 bg-light d-none text-muted"
+                              title="Clear search text">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+
+                    <!-- Header with Live Match Counter and Scroll Hint -->
+                    <div class="d-flex justify-content-between align-items-center px-1 mb-1.5 small text-muted" style="font-size: 0.74rem;">
+                      <span id="cityComboboxCount" class="fw-semibold">Showing all cities</span>
+                      <span class="text-success"><i class="fas fa-arrows-alt-v me-1"></i>Scroll to explore</span>
+                    </div>
+
+                    <!-- Scrollable City Options List -->
+                    <div id="cityComboboxList"
+                         class="list-group list-group-flush overflow-auto border rounded-2"
+                         style="max-height: 230px; scrollbar-width: thin;"
+                         role="listbox">
+                      {% for city_item in cities %}
+                        <button type="button"
+                                class="list-group-item list-group-item-action py-2 px-2.5 border-0 border-bottom rounded-0 city-combobox-item d-flex justify-content-between align-items-center text-start"
+                                data-city-id="{{ city_item.id }}"
+                                data-city-name="{{ city_item.name }}"
+                                data-hub-name="{{ city_item.active_hub.name|default:'' }}"
+                                data-search-terms="{{ city_item.name|lower }} {{ city_item.active_hub.name|default:''|lower }} {{ city_item.active_hub.address|default:''|lower }}">
+                          <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
+                            <i class="fas fa-city text-success flex-shrink-0" style="font-size: 0.85rem;"></i>
+                            <span class="city-name-text fw-medium text-dark text-truncate" style="font-size: 0.86rem;">
+                              {{ city_item.name }}
+                            </span>
+                          </div>
+                          {% if city_item.active_hub %}
+                            <span class="badge bg-light text-primary border small ms-2 flex-shrink-0" style="font-size: 0.70rem;">
+                              <i class="fas fa-warehouse me-1"></i>{{ city_item.active_hub.name }}
+                            </span>
+                          {% else %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small ms-2 flex-shrink-0" style="font-size: 0.70rem;">
+                              Coverage Pending
+                            </span>
+                          {% endif %}
+                        </button>
+                      {% endfor %}
+                    </div>
+
+                    <!-- No Results State with Fallback to Map Address Search -->
+                    <div id="cityComboboxNoResults" class="d-none p-3 text-center text-muted small">
+                      <p class="mb-1 fw-semibold text-dark">No matching city or panchayath found.</p>
+                      <p class="mb-2 text-muted" style="font-size: 0.75rem;">Can't find your area in the city list?</p>
+                      <button type="button" id="cityFallbackMapSearchBtn" class="btn btn-sm btn-outline-success py-1 px-2.5">
+                        <i class="fas fa-map-marker-alt me-1"></i>Search Address on Map ↓
+                      </button>
+                    </div>
+
+                    <!-- Dropdown Footer with Direct Jump to Map Search -->
+                    <div class="pt-2 mt-2 border-top d-flex justify-content-between align-items-center" style="font-size: 0.75rem;">
+                      <span class="text-muted">Exact street location?</span>
+                      <button type="button" id="cityMenuScrollToMapBtn" class="btn btn-link btn-sm p-0 text-decoration-none text-success fw-bold" style="font-size: 0.75rem;">
+                        <i class="fas fa-search-location me-1"></i>Search Street / Map ↓
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-text small text-muted">Search and select your city or panchayath, or use manual search on the map below.</div>
+              </div>
+              <div class="col-md-6 mt-2 mt-md-0">
+                <div id="cityStatusBadge" class="p-2 rounded border bg-white small d-flex align-items-center">
+                  <i class="fas fa-info-circle text-primary me-2"></i>
+                  <span id="cityStatusText">Please select a city to verify service coverage.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Live Service Alert Banner -->
+          <div id="serviceAlertContainer" class="d-none mb-3">
+            <div id="serviceAlertBox" class="alert shadow-sm d-flex align-items-center mb-0">
+              <i id="serviceAlertIcon" class="fas fa-exclamation-triangle fa-2x me-3"></i>
+              <div>
+                <h6 id="serviceAlertTitle" class="fw-bold mb-1">Service Notice</h6>
+                <p id="serviceAlertMessage" class="mb-0 small"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4" id="mapSection">
+            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-map-marked-alt text-primary me-2"></i>1. Set Exact Pickup Location on Map</h5>
+
+            <!-- Manual Location Search Bar with Scrollable Results -->
+            <div class="mb-3 position-relative" id="manualSearchWrapper">
+              <div class="d-flex justify-content-between align-items-center mb-1.5 flex-wrap gap-2">
+                <label for="manualLocationSearchInput" class="small fw-bold text-dark mb-0">
+                  <i class="fas fa-search-location text-success me-1"></i>Manual Address &amp; Location Search:
+                </label>
+                <div class="d-flex gap-2">
+                  <button type="button" id="useCurrentLocBtn" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-location-arrow me-1"></i> Use My Current Location
+                  </button>
+                </div>
+              </div>
+
+              <div class="input-group shadow-sm rounded-3 overflow-hidden">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                  <i class="fas fa-search text-success"></i>
+                </span>
+                <input type="text"
+                       id="manualLocationSearchInput"
+                       class="form-control border-start-0 border-end-0 ps-1"
+                       placeholder="Type area, landmark, street, or address (e.g. Indiranagar, Marine Drive, MG Road)..."
+                       autocomplete="off">
+                <button type="button" id="clearManualSearchBtn" class="btn btn-outline-secondary border-start-0 border-end-0 bg-white d-none text-muted" title="Clear">
+                  <i class="fas fa-times"></i>
+                </button>
+                <button type="button"
+                        id="btnRunManualSearch"
+                        class="btn btn-dark fw-bold px-3 d-flex align-items-center gap-1.5"
+                        style="background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;">
+                  <i class="fas fa-search"></i>
+                  <span>Manual Search</span>
+                </button>
+              </div>
+
+              <!-- Scrollable Search Results Dropdown -->
+              <div id="manualSearchResultsList"
+                   class="list-group position-absolute w-100 shadow-lg border rounded-3 mt-1 d-none overflow-auto"
+                   style="max-height: 240px; z-index: 1050; background: #ffffff; scrollbar-width: thin;">
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small text-muted">Click or drag the green pin marker. Street address will auto-fill below!</span>
+            </div>
+            <!-- Explicit height so Leaflet container never collapses -->
+            <div id="mapPicker" class="mb-2 shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #198754; position: relative; z-index: 1;">
+              <div id="mapLoader" class="d-none justify-content-center align-items-center" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.7); z-index: 1000; border-radius: 10px;">
+                <div class="spinner-border text-success" role="status">
+                  <span class="visually-hidden">Loading location...</span>
+                </div>
+              </div>
+            </div>
+            <span class="badge bg-light text-dark border px-2 py-1">
+              Selected Coordinates: <strong id="coordsDisplay" class="text-dark">9.931200, 76.267300</strong>
+            </span>
+
+            <!-- Address Input / Selection Panel -->
+            <div class="p-3 bg-light rounded-3 border">
+              <h6 class="fw-bold text-dark mb-3"><i class="fas fa-home me-2 text-success"></i>Pickup Address</h6>
+
+              {% if form.address.field.queryset.count > 0 %}
+                <div class="mb-3">
+                  <label class="form-label fw-bold small text-muted">Option A: Select Saved Address</label>
+                  {{ form.address }}
+                </div>
+                <div class="text-center text-muted small my-2 fw-bold">&mdash; OR ENTER NEW ADDRESS BELOW &mdash;</div>
+              {% endif %}
+
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label fw-bold small text-dark">Street Address / Landmark:</label>
+                  {{ form.new_address_line1 }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold small text-dark">City:</label>
+                  {{ form.new_city }}
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label fw-bold small text-dark">Postal Code:</label>
+                  {{ form.new_postal_code }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4 border-top pt-3">
+            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-clipboard-list text-success me-2"></i>2. Waste Category &amp; Schedule Details</h5>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Waste Category:*</label>
+                {{ form.category }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Estimated Weight (kg):*</label>
+                {{ form.weight_kg }}
+                <div class="form-text small" id="weightLimitHelp">
+                  <i class="fas fa-info-circle me-1 text-primary"></i>Maximum limit: <strong id="maxWeightDisplay">100 kg</strong> per pickup request.
+                </div>
+              </div>
+              <div class="col-md-6">
+                <!-- Package boxes / volume estimate field -->
+                <label class="form-label fw-bold small text-dark">Number of Package Boxes (Optional):</label>
+                {{ form.quantity_estimate }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-bold small text-dark">Schedule Date &amp; Time:*</label>
+                <!-- Hidden real field submitted with model form -->
+                {{ form.schedule_date }}
+                <div class="row g-2">
+                  <div class="col-sm-6">
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted"><i class="fas fa-calendar-alt"></i></span>
+                      <input type="date" id="pickup_date_picker" class="form-control" required>
+                    </div>
+                  </div>
+                  <div class="col-sm-6">
+                    <div class="input-group">
+                      <span class="input-group-text bg-light text-muted"><i class="fas fa-clock"></i></span>
+                      <select id="pickup_time_picker" class="form-select" required>
+                        <option value="">Select Time Slot...</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-text small text-muted mt-1">
+                  <i class="fas fa-info-circle me-1 text-primary"></i>Collection hours: <strong>7:00 AM – 8:30 PM</strong> (minimum <strong>3 hours</strong> in advance).
+                </div>
+              </div>
+            </div>
+            {{ form.latitude }}
+            {{ form.longitude }}
+          </div>
+
+          <div class="mt-4 d-flex gap-2 border-top pt-3">
+            <button type="submit" id="id_submit_btn" class="btn btn-success btn-lg px-4 shadow-sm fw-bold">
+              <i class="fas fa-check-circle me-1"></i> Confirm Booking
+            </button>
+            <a href="{% url 'waste_management:dashboard' %}" class="btn btn-outline-secondary btn-lg px-4">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+<script id="saved-addresses-json" type="application/json">
+  [
+    {% for addr in addresses %}
+      {
+        "id": "{{ addr.id }}",
+        "address_line1": "{{ addr.address_line1|escapejs }}",
+        "city": "{{ addr.city|escapejs }}",
+        "postal_code": "{{ addr.postal_code|escapejs }}",
+        "latitude": "{{ addr.latitude|default_if_none:'' }}",
+        "longitude": "{{ addr.longitude|default_if_none:'' }}"
+      }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+</script>
+{% endblock %}
+
+{% block inline_javascript %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Saved addresses JSON mapping
+      const savedAddresses = {{ addresses_json|safe|default:"{}" }};
+      const addressSelect = document.getElementById("id_address");
+
+      // Fix default Leaflet icon CDN URLs
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      let latInput = document.getElementById("id_latitude");
+      let lngInput = document.getElementById("id_longitude");
+      let coordsDisplay = document.getElementById("coordsDisplay");
+
+      let addressLineInput = document.getElementById("id_new_address_line1");
+      let cityInput = document.getElementById("id_new_city");
+      let postalInput = document.getElementById("id_new_postal_code");
+
+      let defaultLat = parseFloat(latInput?.value) || 9.9312;
+      let defaultLng = parseFloat(lngInput?.value) || 76.2673;
+
+      // Define Base Map Tile Layers
+      let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
+      });
+
+      let baseMaps = {
+        "📍 Street Map (OSM)": streetLayer,
+        "🛰️ Satellite View": satelliteLayer
+      };
+
+      let map = L.map('mapPicker', {
+        center: [defaultLat, defaultLng],
+        zoom: 15,
+        layers: [streetLayer]
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      let marker = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(map);
+
+      function showMapLoading(show) {
+        let loader = document.getElementById("mapLoader");
+        if (loader) {
+          if (show) {
+            loader.classList.remove("d-none");
+            loader.classList.add("d-flex");
+          } else {
+            loader.classList.remove("d-flex");
+            loader.classList.add("d-none");
+          }
+        }
+      }
+
+      function reverseGeocode(lat, lng, forceOverwrite = false) {
+        showMapLoading(true);
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`)
+          .then(res => res.json())
+          .then(data => {
+            showMapLoading(false);
+            if (data && data.address) {
+              let addr = data.address;
+              let road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.subdistrict || addr.amenity || "";
+              let city = addr.city || addr.town || addr.village || addr.municipality || addr.county || addr.state_district || addr.city_district || "";
+              let postcode = addr.postcode || "";
+
+              if (road && addressLineInput && (forceOverwrite || !addressLineInput.value)) {
+                addressLineInput.value = road;
+              } else if (data.display_name && addressLineInput && (forceOverwrite || !addressLineInput.value)) {
+                addressLineInput.value = data.display_name.split(',')[0];
+              }
+
+              if (city && cityInput && (forceOverwrite || !cityInput.value)) {
+                cityInput.value = city;
+              }
+              if (postcode && postalInput && (forceOverwrite || !postalInput.value)) {
+                postalInput.value = postcode;
+              }
+            }
+          })
+          .catch(err => {
+            console.log("Geocoding notice:", err);
+            showMapLoading(false);
+          });
+      }
+
+      function updateCoords(lat, lng, fetchAddress = true, forceOverwrite = false) {
+        let formattedLat = lat.toFixed(6);
+        let formattedLng = lng.toFixed(6);
+        if (latInput) latInput.value = formattedLat;
+        if (lngInput) lngInput.value = formattedLng;
+        if (coordsDisplay) coordsDisplay.textContent = `${formattedLat}, ${formattedLng}`;
+
+        if (fetchAddress) {
+          reverseGeocode(lat, lng, forceOverwrite);
+        }
+        updateServiceAvailability();
+      }
+
+      // City & Hub 20 km Radius Service Availability
+      const citiesData = {{ cities_json|safe|default:"{}" }};
+      const citySelect = document.getElementById("id_city_select");
+      const submitBtn = document.getElementById("id_submit_btn");
+      const serviceAlertContainer = document.getElementById("serviceAlertContainer");
+      const serviceAlertBox = document.getElementById("serviceAlertBox");
+      const serviceAlertIcon = document.getElementById("serviceAlertIcon");
+      const serviceAlertTitle = document.getElementById("serviceAlertTitle");
+      const serviceAlertMessage = document.getElementById("serviceAlertMessage");
+      const cityStatusText = document.getElementById("cityStatusText");
+      let hubCircle = null;
+      let hubMarker = null;
+
+      function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371.0;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(R * c * 100) / 100;
+      }
+
+      function updateServiceAvailability() {
+        if (!citySelect) return;
+        const cityId = citySelect.value;
+        const currentLat = parseFloat(latInput?.value) || defaultLat;
+        const currentLng = parseFloat(lngInput?.value) || defaultLng;
+
+        if (!cityId || !citiesData[cityId]) {
+          if (serviceAlertContainer) serviceAlertContainer.classList.add("d-none");
+          if (cityStatusText) cityStatusText.textContent = "Please select a city to verify service coverage.";
+          if (hubCircle) { map.removeLayer(hubCircle); hubCircle = null; }
+          if (hubMarker) { map.removeLayer(hubMarker); hubMarker = null; }
+          if (submitBtn) submitBtn.disabled = false;
+          return;
+        }
+
+        const city = citiesData[cityId];
+
+        // 1. City without active hub
+        if (!city.has_active_hub) {
+          if (serviceAlertContainer) serviceAlertContainer.classList.remove("d-none");
+          if (serviceAlertBox) serviceAlertBox.className = "alert alert-danger shadow-sm d-flex align-items-center mb-0";
+          if (serviceAlertIcon) serviceAlertIcon.className = "fas fa-times-circle fa-2x me-3 text-danger";
+          if (serviceAlertTitle) serviceAlertTitle.textContent = "Service Unavailable";
+          if (serviceAlertMessage) serviceAlertMessage.textContent = "Pickup service is currently unavailable in this city because no active hub is registered.";
+          if (cityStatusText) cityStatusText.innerHTML = `<strong class="text-danger">No Active Hub Registered</strong>`;
+          if (hubCircle) { map.removeLayer(hubCircle); hubCircle = null; }
+          if (hubMarker) { map.removeLayer(hubMarker); hubMarker = null; }
+          if (submitBtn) submitBtn.disabled = true;
+          return;
+        }
+
+        // 2. City with hub, but no registered/active collectors
+        if (!city.has_active_collectors) {
+          if (serviceAlertContainer) serviceAlertContainer.classList.remove("d-none");
+          if (serviceAlertBox) serviceAlertBox.className = "alert alert-warning shadow-sm d-flex align-items-center mb-0";
+          if (serviceAlertIcon) serviceAlertIcon.className = "fas fa-clock fa-2x me-3 text-warning";
+          if (serviceAlertTitle) serviceAlertTitle.textContent = "Coming Soon";
+          if (serviceAlertMessage) serviceAlertMessage.textContent = "Pickup service is currently unavailable in your city. It will be available soon as collectors are registered in this area.";
+          if (cityStatusText) cityStatusText.innerHTML = `<strong class="text-warning">Collectors Not Yet Registered</strong> (Available Soon)`;
+          if (hubCircle) { map.removeLayer(hubCircle); hubCircle = null; }
+          if (hubMarker) { map.removeLayer(hubMarker); hubMarker = null; }
+          if (submitBtn) submitBtn.disabled = true;
+          return;
+        }
+
+        // 3. City has active hub and registered collectors -> Show 20 km radius circle & check distance
+        const hubLat = city.hub_lat;
+        const hubLng = city.hub_lng;
+
+        if (hubCircle) {
+          hubCircle.setLatLng([hubLat, hubLng]);
+        } else {
+          hubCircle = L.circle([hubLat, hubLng], {
+            radius: 20000,
+            color: '#198754',
+            fillColor: '#d1e7dd',
+            fillOpacity: 0.18,
+            weight: 2,
+            dashArray: '5, 5'
+          }).addTo(map);
+        }
+
+        if (hubMarker) {
+          hubMarker.setLatLng([hubLat, hubLng]);
+        } else {
+          const hubIcon = L.divIcon({
+            html: '<div style="background:#0d6efd;color:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 5px rgba(0,0,0,0.4);border:2px solid #fff;"><i class="fas fa-warehouse text-xs"></i></div>',
+            className: 'custom-hub-icon',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+          });
+          hubMarker = L.marker([hubLat, hubLng], { icon: hubIcon }).addTo(map)
+            .bindPopup(`<strong>${city.hub_name}</strong><br>${city.hub_address}<br><em>20 km Service Radius Anchor</em>`);
+        }
+
+        const dist = haversineDistance(hubLat, hubLng, currentLat, currentLng);
+
+        if (dist <= 20.0) {
+          if (serviceAlertContainer) serviceAlertContainer.classList.remove("d-none");
+          if (serviceAlertBox) serviceAlertBox.className = "alert alert-success shadow-sm d-flex align-items-center mb-0";
+          if (serviceAlertIcon) serviceAlertIcon.className = "fas fa-check-circle fa-2x me-3 text-success";
+          if (serviceAlertTitle) serviceAlertTitle.textContent = "Service Available";
+          if (serviceAlertMessage) serviceAlertMessage.textContent = `✓ Pickup location is within service area (${dist.toFixed(1)} km from ${city.hub_name}).`;
+          if (cityStatusText) cityStatusText.innerHTML = `<strong class="text-success"><i class="fas fa-check me-1"></i>Eligible</strong> (${dist.toFixed(1)} km from ${city.hub_name})`;
+          if (submitBtn) submitBtn.disabled = false;
+        } else {
+          if (serviceAlertContainer) serviceAlertContainer.classList.remove("d-none");
+          if (serviceAlertBox) serviceAlertBox.className = "alert alert-danger shadow-sm d-flex align-items-center mb-0";
+          if (serviceAlertIcon) serviceAlertIcon.className = "fas fa-exclamation-circle fa-2x me-3 text-danger";
+          if (serviceAlertTitle) serviceAlertTitle.textContent = "Outside Service Area";
+          if (serviceAlertMessage) serviceAlertMessage.textContent = `Pickup service is unavailable at this location. The pickup address is outside the 20 km service area of the nearest active hub (${dist.toFixed(1)} km away).`;
+          if (cityStatusText) cityStatusText.innerHTML = `<strong class="text-danger"><i class="fas fa-times me-1"></i>Outside 20 km Radius</strong> (${dist.toFixed(1)} km from ${city.hub_name})`;
+          if (submitBtn) submitBtn.disabled = true;
+        }
+      }
+
+      if (citySelect) {
+        citySelect.addEventListener("change", function () {
+          const cityId = citySelect.value;
+          if (cityId && citiesData[cityId] && citiesData[cityId].has_active_hub) {
+            const hLat = citiesData[cityId].hub_lat;
+            const hLng = citiesData[cityId].hub_lng;
+            map.setView([hLat, hLng], 12);
+          }
+          updateServiceAvailability();
+        });
+      }
+
+      function syncMapWithSelectedAddress() {
+        if (!addressSelect) return;
+        const selectedId = addressSelect.value;
+        if (selectedId && savedAddresses[selectedId]) {
+          const addrObj = savedAddresses[selectedId];
+          const lat = addrObj.lat;
+          const lng = addrObj.lng;
+          map.setView([lat, lng], 17);
+          marker.setLatLng([lat, lng]);
+          updateCoords(lat, lng, false);
+
+          // Auto-match city in citySelect if possible
+          if (citySelect && addrObj.city) {
+            for (let i = 0; i < citySelect.options.length; i++) {
+              if (citySelect.options[i].text.toLowerCase().includes(addrObj.city.toLowerCase())) {
+                citySelect.selectedIndex = i;
+                break;
+              }
+            }
+          }
+
+          // Pre-fill the new address inputs and make them read-only
+          if (addressLineInput) {
+            addressLineInput.value = addrObj.line1 || "";
+            addressLineInput.readOnly = true;
+          }
+          if (cityInput) {
+            cityInput.value = addrObj.city || "";
+            cityInput.readOnly = true;
+          }
+          if (postalInput) {
+            postalInput.value = addrObj.postal_code || "";
+            postalInput.readOnly = true;
+          }
+          updateServiceAvailability();
+        } else {
+          // Re-enable and clear if selection reset
+          if (addressLineInput) {
+            addressLineInput.readOnly = false;
+            addressLineInput.value = "";
+          }
+          if (cityInput) {
+            cityInput.readOnly = false;
+            cityInput.value = "";
+          }
+          if (postalInput) {
+            postalInput.readOnly = false;
+            postalInput.value = "";
+          }
+          updateServiceAvailability();
+        }
+      }
+
+      if (addressSelect) {
+        addressSelect.addEventListener("change", syncMapWithSelectedAddress);
+        if (addressSelect.value) {
+          syncMapWithSelectedAddress();
+        }
+      }
+
+      marker.on('dragend', function (e) {
+        let position = marker.getLatLng();
+        updateCoords(position.lat, position.lng, true, true);
+        updateServiceAvailability();
+      });
+
+      map.on('click', function (e) {
+        marker.setLatLng(e.latlng);
+        updateCoords(e.latlng.lat, e.latlng.lng, true, true);
+        updateServiceAvailability();
+      });
+
+      // Geolocation button function with high accuracy GPS
+      let accuracyCircle = null;
+
+      function geolocateUser(forceOverwrite = true) {
+        if (navigator.geolocation) {
+          showMapLoading(true);
+          navigator.geolocation.getCurrentPosition(
+            function (pos) {
+              showMapLoading(false);
+              let lat = pos.coords.latitude;
+              let lng = pos.coords.longitude;
+              let accuracy = pos.coords.accuracy || 15;
+
+              map.setView([lat, lng], 17);
+              marker.setLatLng([lat, lng]);
+
+              if (accuracyCircle) {
+                accuracyCircle.setLatLng([lat, lng]).setRadius(accuracy);
+              } else {
+                accuracyCircle = L.circle([lat, lng], {
+                  radius: accuracy,
+                  color: '#16a34a',
+                  fillColor: '#22c55e',
+                  fillOpacity: 0.15,
+                  weight: 1.5
+                }).addTo(map);
+              }
+
+              updateCoords(lat, lng, true, forceOverwrite);
+            },
+            function (err) {
+              showMapLoading(false);
+              if (forceOverwrite) {
+                setTimeout(function () {
+                  alert("Unable to fetch current GPS location. Please ensure location services are enabled or select manually on the map.");
+                }, 50);
+              } else {
+                console.log("Auto-geolocation notice:", err);
+              }
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            }
+          );
+        }
+      }
+
+      document.getElementById('useCurrentLocBtn')?.addEventListener('click', function () {
+        geolocateUser(true);
+      });
+
+      // Auto-locate on load if no saved address is selected and coordinates are default
+      if (!addressSelect || !addressSelect.value) {
+        if (latInput && (!latInput.value || parseFloat(latInput.value) === 9.9312 || parseFloat(latInput.value) === 12.9716)) {
+          // Attempt silent auto-locate
+          geolocateUser(false);
+        }
+      }
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      // If there is no pre-existing value, trigger map initialization coords
+      if (!latInput?.value) {
+        updateCoords(defaultLat, defaultLng, false);
+      }
+
+      // Schedule Date & Time: Restrict date and generate only valid time slots (7:00 AM - 8:30 PM, >= 3h in advance)
+      const hiddenScheduleInput = document.querySelector('input[name="schedule_date"]');
+      const datePicker = document.getElementById('pickup_date_picker');
+      const timePicker = document.getElementById('pickup_time_picker');
+
+      if (hiddenScheduleInput && datePicker && timePicker) {
+        hiddenScheduleInput.style.display = 'none';
+
+        function padZero(n) {
+          return n < 10 ? '0' + n : '' + n;
+        }
+
+        function formatDisplayTime(hour, minute) {
+          const ampm = hour >= 12 ? 'PM' : 'AM';
+          const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+          return `${displayHour}:${padZero(minute)} ${ampm}`;
+        }
+
+        // Calculate earliest selectable date and time (now + 3 hours)
+        const now = new Date();
+        const earliestAllowed = new Date(now.getTime() + (3 * 60 * 60 * 1000));
+
+        // Format today's minimum date YYYY-MM-DD
+        const minYear = earliestAllowed.getFullYear();
+        const minMonth = padZero(earliestAllowed.getMonth() + 1);
+        const minDay = padZero(earliestAllowed.getDate());
+        const minDateStr = `${minYear}-${minMonth}-${minDay}`;
+
+        // Set min attribute on date picker so past days cannot be selected
+        datePicker.min = minDateStr;
+
+        // If today is already past 8:30 PM after +3 hours, default date is tomorrow
+        const isPastEveningToday = (earliestAllowed.getHours() * 60 + earliestAllowed.getMinutes()) > (20 * 60 + 30);
+        let defaultDateObj = earliestAllowed;
+        if (isPastEveningToday) {
+          defaultDateObj = new Date(earliestAllowed.getTime() + (24 * 60 * 60 * 1000));
+        }
+
+        const defaultDateStr = `${defaultDateObj.getFullYear()}-${padZero(defaultDateObj.getMonth() + 1)}-${padZero(defaultDateObj.getDate())}`;
+
+        // Initialize from existing hidden value if present, otherwise default
+        let initialDateStr = defaultDateStr;
+        let initialTimeStr = "";
+
+        if (hiddenScheduleInput.value) {
+          const parts = hiddenScheduleInput.value.split('T');
+          if (parts.length === 2) {
+            initialDateStr = parts[0];
+            initialTimeStr = parts[1].substring(0, 5);
+          }
+        }
+        datePicker.value = initialDateStr;
+
+        function populateTimeSlots(selectedDateStr) {
+          timePicker.innerHTML = '<option value="">Select Time Slot...</option>';
+          if (!selectedDateStr) return;
+
+          const selParts = selectedDateStr.split('-');
+          const selYear = parseInt(selParts[0], 10);
+          const selMonth = parseInt(selParts[1], 10) - 1;
+          const selDay = parseInt(selParts[2], 10);
+
+          // Working hours: 07:00 (7:00 AM) to 20:30 (8:30 PM) in 15-minute intervals
+          const startMinutes = 7 * 60;          // 420 (07:00)
+          const endMinutes = (20 * 60) + 30;    // 1230 (20:30)
+
+          let availableSlotsCount = 0;
+
+          for (let m = startMinutes; m <= endMinutes; m += 15) {
+            const h = Math.floor(m / 60);
+            const min = m % 60;
+            const slotDate = new Date(selYear, selMonth, selDay, h, min, 0);
+
+            // Must be at least 3 hours from now
+            if (slotDate.getTime() >= earliestAllowed.getTime()) {
+              const timeVal = `${padZero(h)}:${padZero(min)}`;
+              const timeLabel = formatDisplayTime(h, min);
+              const option = document.createElement('option');
+              option.value = timeVal;
+              option.textContent = timeLabel;
+              timePicker.appendChild(option);
+              availableSlotsCount++;
+            }
+          }
+
+          if (availableSlotsCount === 0) {
+            const opt = document.createElement('option');
+            opt.value = "";
+            opt.textContent = "No available slots today (past 8:30 PM or <3h). Please select tomorrow.";
+            opt.disabled = true;
+            timePicker.appendChild(opt);
+          }
+        }
+
+        function updateHiddenSchedule() {
+          if (datePicker.value && timePicker.value) {
+            hiddenScheduleInput.value = `${datePicker.value}T${timePicker.value}`;
+          } else {
+            hiddenScheduleInput.value = "";
+          }
+        }
+
+        datePicker.addEventListener('change', function () {
+          populateTimeSlots(this.value);
+          timePicker.value = "";
+          updateHiddenSchedule();
+        });
+
+        timePicker.addEventListener('change', function () {
+          updateHiddenSchedule();
+        });
+
+        // Initial population
+        populateTimeSlots(datePicker.value);
+
+        // Pre-select initial time slot if valid
+        if (initialTimeStr) {
+          timePicker.value = initialTimeStr;
+        }
+        if (!timePicker.value && timePicker.options.length > 1) {
+          // Select the first available valid time slot
+          timePicker.selectedIndex = 1;
+        }
+        updateHiddenSchedule();
+      }
+
+      // -------------------------------------------------------------------------------------------------------- Dynamic Category Weight Limit --------------------------------------------------------------------------------------------------------
+      const categoriesData = {{ categories_json|safe|default:"{}" }};
+      const categorySelect = document.getElementById("id_category");
+      const weightInput = document.getElementById("id_weight_kg");
+      const maxWeightDisplay = document.getElementById("maxWeightDisplay");
+      const weightHelp = document.getElementById("weightLimitHelp");
+
+      // Ensure dropdown options always display category name
+      if (categorySelect && categoriesData) {
+        Array.from(categorySelect.options).forEach(opt => {
+          if (!opt.value) {
+            opt.textContent = "Select Waste Category...";
+          } else if (categoriesData[opt.value] && categoriesData[opt.value].name) {
+            opt.textContent = categoriesData[opt.value].name;
+          }
+        });
+      }
+
+      function updateCategoryWeightLimit() {
+        if (!categorySelect || !weightInput) return;
+        const catId = categorySelect.value;
+        let maxLimit = 100.00;
+        let catName = "";
+
+        if (catId && categoriesData[catId]) {
+          maxLimit = parseFloat(categoriesData[catId].max_weight_kg) || 100.00;
+          catName = categoriesData[catId].name;
+        }
+
+        weightInput.max = maxLimit;
+        if (maxWeightDisplay) {
+          maxWeightDisplay.textContent = `${maxLimit} kg` + (catName ? ` (${catName})` : "");
+        }
+
+        // Validate current value if already typed
+        const curVal = parseFloat(weightInput.value);
+        if (!isNaN(curVal) && curVal > maxLimit) {
+          weightInput.classList.add("is-invalid");
+          if (weightHelp) {
+            weightHelp.className = "form-text small text-danger";
+            weightHelp.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>Weight exceeds allowed limit of <strong>${maxLimit} kg</strong>!`;
+          }
+        } else {
+          weightInput.classList.remove("is-invalid");
+          if (weightHelp) {
+            weightHelp.className = "form-text small text-muted";
+            weightHelp.innerHTML = `<i class="fas fa-info-circle me-1 text-primary"></i>Maximum limit: <strong id="maxWeightDisplay">${maxLimit} kg${catName ? ' (' + catName + ')' : ''}</strong> per pickup request.`;
+          }
+        }
+      }
+
+      if (categorySelect) {
+        categorySelect.addEventListener("change", updateCategoryWeightLimit);
+      }
+      if (weightInput) {
+        weightInput.addEventListener("input", updateCategoryWeightLimit);
+      }
+      updateCategoryWeightLimit();
+
+      // ==============================================================================
+      // MANUAL LOCATION & ADDRESS SEARCH WITH SCROLLABLE RESULTS DROPDOWN
+      // ==============================================================================
+      /**
+       * Provides citizens with an interactive manual address search bar that queries
+       * local operational hubs and OpenStreetMap (Nominatim) for exact coordinates.
+       * Features:
+       *  - 'Manual Search' jump button with smooth scrolling from the City selector
+       *  - Dedicated 'Manual Search' action button with high-contrast dark styling
+       *  - Scrollable search results list with custom scrollbar
+       *  - Auto-centering map view, marker repositioning, and auto-filling address inputs
+       *  - Automatic 20 km service radius coverage validation upon selection
+       */
+      const manualSearchInput = document.getElementById("manualLocationSearchInput");
+      const btnRunManualSearch = document.getElementById("btnRunManualSearch");
+      const clearManualSearchBtn = document.getElementById("clearManualSearchBtn");
+      const manualSearchResultsList = document.getElementById("manualSearchResultsList");
+      const scrollToManualSearchBtn = document.getElementById("scrollToManualSearchBtn");
+
+      // ==============================================================================
+      // 1. SEARCHABLE CITY / REGION COMBOBOX & MANUAL SEARCH BUTTON INTEGRATION
+      // ==============================================================================
+      /**
+       * Searchable City / Region Combobox:
+       * - Search input with live filtering across City name, Hub name, and addresses
+       * - Smooth integration with 'Manual Search' button in the City card header
+       * - Bidirectional synchronization with underlying Django {{ form.city }} select
+       * - Direct fallback to map-based address search when custom query is entered
+       */
+      const cityComboboxWrapper = document.getElementById("cityComboboxWrapper");
+      const cityComboboxTrigger = document.getElementById("cityComboboxTrigger");
+      const cityComboboxMenu = document.getElementById("cityComboboxMenu");
+      const cityComboboxSearchInput = document.getElementById("cityComboboxSearchInput");
+      const cityComboboxSearchClearBtn = document.getElementById("cityComboboxSearchClearBtn");
+      const cityComboboxClearBtn = document.getElementById("cityComboboxClearBtn");
+      const cityComboboxSelectedLabel = document.getElementById("cityComboboxSelectedLabel");
+      const cityComboboxList = document.getElementById("cityComboboxList");
+      const cityComboboxCount = document.getElementById("cityComboboxCount");
+      const cityComboboxNoResults = document.getElementById("cityComboboxNoResults");
+      const cityFallbackMapSearchBtn = document.getElementById("cityFallbackMapSearchBtn");
+      const cityMenuScrollToMapBtn = document.getElementById("cityMenuScrollToMapBtn");
+
+      // Dynamically populate options from citySelect if template loop was empty
+      if (cityComboboxList && cityComboboxList.children.length === 0 && citySelect) {
+        Array.from(citySelect.options).forEach(opt => {
+          if (!opt.value) return;
+          const cData = citiesData[opt.value] || {};
+          const itemBtn = document.createElement("button");
+          itemBtn.type = "button";
+          itemBtn.className = "list-group-item list-group-item-action py-2 px-2.5 border-0 border-bottom rounded-0 city-combobox-item d-flex justify-content-between align-items-center text-start";
+          itemBtn.dataset.cityId = opt.value;
+          itemBtn.dataset.cityName = opt.text;
+          itemBtn.dataset.hubName = cData.hub_name || "";
+          itemBtn.dataset.searchTerms = `${opt.text.toLowerCase()} ${(cData.hub_name || "").toLowerCase()} ${(cData.hub_address || "").toLowerCase()}`;
+
+          const hubBadge = cData.has_active_hub
+            ? `<span class="badge bg-light text-primary border small ms-2 flex-shrink-0" style="font-size: 0.70rem;"><i class="fas fa-warehouse me-1"></i>${cData.hub_name || "Hub"}</span>`
+            : `<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small ms-2 flex-shrink-0" style="font-size: 0.70rem;">Coverage Pending</span>`;
+
+          itemBtn.innerHTML = `
+            <div class="d-flex align-items-center gap-2 min-w-0 flex-grow-1">
+              <i class="fas fa-city text-success flex-shrink-0" style="font-size: 0.85rem;"></i>
+              <span class="city-name-text fw-medium text-dark text-truncate" style="font-size: 0.86rem;">${opt.text}</span>
+            </div>
+            ${hubBadge}
+          `;
+          cityComboboxList.appendChild(itemBtn);
+        });
+      }
+
+      function openCityCombobox() {
+        if (!cityComboboxMenu) return;
+        cityComboboxMenu.classList.remove("d-none");
+        if (cityComboboxTrigger) cityComboboxTrigger.setAttribute("aria-expanded", "true");
+        if (cityComboboxSearchInput) {
+          cityComboboxSearchInput.focus();
+          cityComboboxSearchInput.select();
+        }
+      }
+
+      function closeCityCombobox() {
+        if (!cityComboboxMenu) return;
+        cityComboboxMenu.classList.add("d-none");
+        if (cityComboboxTrigger) cityComboboxTrigger.setAttribute("aria-expanded", "false");
+      }
+
+      function toggleCityCombobox() {
+        if (!cityComboboxMenu) return;
+        if (cityComboboxMenu.classList.contains("d-none")) {
+          openCityCombobox();
+        } else {
+          closeCityCombobox();
+        }
+      }
+
+      function selectCity(cityId, cityName) {
+        if (!citySelect) return;
+        citySelect.value = cityId;
+        if (cityComboboxSelectedLabel) {
+          cityComboboxSelectedLabel.textContent = cityName;
+          cityComboboxSelectedLabel.classList.remove("text-muted");
+          cityComboboxSelectedLabel.classList.add("fw-semibold", "text-dark");
+        }
+        if (cityComboboxClearBtn) {
+          cityComboboxClearBtn.classList.remove("d-none");
+        }
+        closeCityCombobox();
+        // Trigger distance calculation, 20 km radius circle, and map repositioning
+        citySelect.dispatchEvent(new Event("change"));
+      }
+
+      function clearCitySelection() {
+        if (!citySelect) return;
+        citySelect.value = "";
+        if (cityComboboxSelectedLabel) {
+          cityComboboxSelectedLabel.textContent = "Select City...";
+          cityComboboxSelectedLabel.classList.remove("fw-semibold", "text-dark");
+          cityComboboxSelectedLabel.classList.add("text-muted");
+        }
+        if (cityComboboxClearBtn) {
+          cityComboboxClearBtn.classList.add("d-none");
+        }
+        citySelect.dispatchEvent(new Event("change"));
+      }
+
+      // Sync display label when citySelect is initialized or changed programmatically
+      function syncCityComboboxFromSelect() {
+        if (!citySelect || !cityComboboxSelectedLabel) return;
+        const selectedOpt = citySelect.options[citySelect.selectedIndex];
+        if (selectedOpt && selectedOpt.value) {
+          cityComboboxSelectedLabel.textContent = selectedOpt.text;
+          cityComboboxSelectedLabel.classList.remove("text-muted");
+          cityComboboxSelectedLabel.classList.add("fw-semibold", "text-dark");
+          if (cityComboboxClearBtn) cityComboboxClearBtn.classList.remove("d-none");
+        } else {
+          cityComboboxSelectedLabel.textContent = "Select City...";
+          cityComboboxSelectedLabel.classList.remove("fw-semibold", "text-dark");
+          cityComboboxSelectedLabel.classList.add("text-muted");
+          if (cityComboboxClearBtn) cityComboboxClearBtn.classList.add("d-none");
+        }
+      }
+
+      // Filter city options as citizen types
+      function filterCityOptions(query) {
+        const q = query.trim().toLowerCase();
+        const items = cityComboboxList ? cityComboboxList.querySelectorAll(".city-combobox-item") : [];
+        let visibleCount = 0;
+
+        items.forEach(item => {
+          const searchTerms = item.dataset.searchTerms || item.textContent.toLowerCase();
+          const matches = !q || searchTerms.includes(q);
+          item.classList.toggle("d-none", !matches);
+          if (matches) visibleCount++;
+        });
+
+        if (cityComboboxCount) {
+          cityComboboxCount.textContent = q ? `${visibleCount} of ${items.length} cities` : `Showing all ${items.length} cities`;
+        }
+
+        if (cityComboboxNoResults) {
+          cityComboboxNoResults.classList.toggle("d-none", visibleCount > 0);
+        }
+
+        if (cityComboboxSearchClearBtn) {
+          cityComboboxSearchClearBtn.classList.toggle("d-none", q.length === 0);
+        }
+      }
+
+      if (cityComboboxTrigger) {
+        cityComboboxTrigger.addEventListener("click", function (e) {
+          e.stopPropagation();
+          toggleCityCombobox();
+        });
+      }
+
+      if (cityComboboxClearBtn) {
+        cityComboboxClearBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          clearCitySelection();
+        });
+      }
+
+      if (cityComboboxSearchInput) {
+        cityComboboxSearchInput.addEventListener("input", function () {
+          filterCityOptions(this.value);
+        });
+
+        cityComboboxSearchInput.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") {
+            closeCityCombobox();
+          } else if (e.key === "Enter") {
+            e.preventDefault();
+            const visibleItems = cityComboboxList ? Array.from(cityComboboxList.querySelectorAll(".city-combobox-item:not(.d-none)")) : [];
+            if (visibleItems.length > 0) {
+              selectCity(visibleItems[0].dataset.cityId, visibleItems[0].dataset.cityName);
+            }
+          }
+        });
+      }
+
+      if (cityComboboxSearchClearBtn) {
+        cityComboboxSearchClearBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (cityComboboxSearchInput) {
+            cityComboboxSearchInput.value = "";
+            filterCityOptions("");
+            cityComboboxSearchInput.focus();
+          }
+        });
+      }
+
+      // Click on city option item
+      if (cityComboboxList) {
+        cityComboboxList.addEventListener("click", function (e) {
+          const item = e.target.closest(".city-combobox-item");
+          if (item) {
+            selectCity(item.dataset.cityId, item.dataset.cityName);
+          }
+        });
+      }
+
+      // Close dropdown when clicking outside
+      document.addEventListener("click", function (e) {
+        if (cityComboboxWrapper && !cityComboboxWrapper.contains(e.target)) {
+          closeCityCombobox();
+        }
+      });
+
+      // Synchronize when citySelect changes
+      if (citySelect) {
+        citySelect.addEventListener("change", syncCityComboboxFromSelect);
+        syncCityComboboxFromSelect();
+      }
+
+      // Forward query to map manual search if citizen needs exact street address
+      function forwardToMapSearch(query) {
+        closeCityCombobox();
+        const wrapper = document.getElementById("manualSearchWrapper");
+        if (wrapper) {
+          wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        if (manualSearchInput) {
+          if (query) manualSearchInput.value = query;
+          setTimeout(() => {
+            manualSearchInput.focus();
+            if (query && typeof executeManualSearch === "function") {
+              executeManualSearch();
+            }
+          }, 350);
+        }
+      }
+
+      if (cityFallbackMapSearchBtn) {
+        cityFallbackMapSearchBtn.addEventListener("click", function () {
+          forwardToMapSearch(cityComboboxSearchInput ? cityComboboxSearchInput.value : "");
+        });
+      }
+
+      if (cityMenuScrollToMapBtn) {
+        cityMenuScrollToMapBtn.addEventListener("click", function () {
+          forwardToMapSearch(cityComboboxSearchInput ? cityComboboxSearchInput.value : "");
+        });
+      }
+
+      // 'Manual Search' button in City card: Opens search in that button & focuses the input
+      if (scrollToManualSearchBtn) {
+        scrollToManualSearchBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          openCityCombobox();
+          if (cityComboboxSearchInput) {
+            cityComboboxSearchInput.focus();
+            cityComboboxSearchInput.classList.add("border-success");
+            setTimeout(() => cityComboboxSearchInput.classList.remove("border-success"), 1200);
+          }
+        });
+      }
+
+      let manualSearchDebounceTimer = null;
+
+      // 2. Render scrollable search results dropdown
+      function renderSearchResults(results) {
+        if (!manualSearchResultsList) return;
+        manualSearchResultsList.innerHTML = "";
+
+        if (!results || results.length === 0) {
+          manualSearchResultsList.innerHTML = `
+            <div class="p-3 text-center text-muted small">
+              <i class="fas fa-map-pin me-1 text-secondary"></i>No matching places found. Try another landmark or street name.
+            </div>
+          `;
+          manualSearchResultsList.classList.remove("d-none");
+          return;
+        }
+
+        results.forEach(item => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "list-group-item list-group-item-action py-2.5 px-3 text-start border-bottom d-flex align-items-start gap-2.5";
+
+          const icon = item.isHub ? '<i class="fas fa-warehouse text-primary mt-1 flex-shrink-0"></i>' : '<i class="fas fa-map-marker-alt text-success mt-1 flex-shrink-0"></i>';
+          const badge = item.isHub ? '<span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-auto small">Operating Hub</span>' : '';
+
+          btn.innerHTML = `
+            ${icon}
+            <div class="flex-grow-1 min-w-0">
+              <div class="d-flex align-items-center justify-content-between">
+                <strong class="text-dark text-truncate d-block" style="font-size: 0.88rem;">${item.title}</strong>
+                ${badge}
+              </div>
+              <small class="text-muted d-block text-truncate" style="font-size: 0.78rem;">${item.subtitle}</small>
+            </div>
+          `;
+
+          btn.addEventListener("click", function () {
+            selectSearchResult(item);
+          });
+
+          manualSearchResultsList.appendChild(btn);
+        });
+
+        // Sticky scroll navigation hint at bottom of dropdown
+        const footer = document.createElement("div");
+        footer.className = "py-1.5 px-3 bg-light border-top text-center text-muted small";
+        footer.style.fontSize = "0.72rem";
+        footer.innerHTML = '<i class="fas fa-arrows-alt-v me-1 text-success"></i>Scroll to explore all ' + results.length + ' matching locations &bull; Click to set pin';
+        manualSearchResultsList.appendChild(footer);
+
+        manualSearchResultsList.classList.remove("d-none");
+      }
+
+      // 3. Select search result: pan map, move marker, populate address, smooth scroll
+      function selectSearchResult(item) {
+        const lat = parseFloat(item.lat);
+        const lng = parseFloat(item.lng);
+
+        if (isNaN(lat) || isNaN(lng)) return;
+
+        // Animate map view to selected coordinate
+        map.setView([lat, lng], 16);
+        marker.setLatLng([lat, lng]);
+
+        // Auto-fill address fields directly from result data
+        if (addressLineInput && item.street) {
+          addressLineInput.value = item.street;
+        }
+        if (cityInput && item.city) {
+          cityInput.value = item.city;
+        }
+        if (postalInput && item.postcode) {
+          postalInput.value = item.postcode;
+        }
+
+        // Update coordinates and trigger service availability radius calculation
+        updateCoords(lat, lng, true, true);
+
+        // Auto-match city in citySelect if possible
+        if (citySelect && item.city) {
+          const itemCityLower = item.city.toLowerCase();
+          for (let i = 0; i < citySelect.options.length; i++) {
+            if (citySelect.options[i].text.toLowerCase().includes(itemCityLower)) {
+              citySelect.selectedIndex = i;
+              citySelect.dispatchEvent(new Event("change"));
+              break;
+            }
+          }
+        }
+
+        // Hide results dropdown and update input display
+        if (manualSearchResultsList) {
+          manualSearchResultsList.classList.add("d-none");
+        }
+        if (manualSearchInput) {
+          manualSearchInput.value = item.title;
+        }
+        if (clearManualSearchBtn) {
+          clearManualSearchBtn.classList.remove("d-none");
+        }
+
+        // Smoothly scroll down to the Leaflet map container
+        const mapEl = document.getElementById("mapPicker");
+        if (mapEl) {
+          mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+
+      // 4. Execute manual search against operational hubs and OSM Nominatim API
+      function executeManualSearch() {
+        if (!manualSearchInput) return;
+        const query = manualSearchInput.value.trim();
+        if (query.length < 2) {
+          if (manualSearchResultsList) manualSearchResultsList.classList.add("d-none");
+          return;
+        }
+
+        showMapLoading(true);
+
+        // Search local active cities and hubs first
+        const localMatches = [];
+        const qLower = query.toLowerCase();
+        for (const [cId, cData] of Object.entries(citiesData)) {
+          if (cData.name && cData.name.toLowerCase().includes(qLower)) {
+            localMatches.push({
+              title: cData.name,
+              subtitle: cData.hub_name ? `${cData.hub_name} &bull; ${cData.hub_address}` : "Supported City Region",
+              lat: cData.hub_lat,
+              lng: cData.hub_lng,
+              city: cData.name,
+              isHub: true
+            });
+          }
+          if (cData.hub_name && cData.hub_name.toLowerCase().includes(qLower)) {
+            localMatches.push({
+              title: cData.hub_name,
+              subtitle: `${cData.hub_address} &bull; ${cData.name}`,
+              lat: cData.hub_lat,
+              lng: cData.hub_lng,
+              city: cData.name,
+              isHub: true
+            });
+          }
+        }
+
+        // Search OpenStreetMap Nominatim for street addresses and landmarks
+        const searchUrl = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&q=${encodeURIComponent(query)}`;
+
+        fetch(searchUrl)
+          .then(res => res.json())
+          .then(data => {
+            showMapLoading(false);
+            const externalMatches = [];
+            if (Array.isArray(data)) {
+              data.forEach(item => {
+                const addr = item.address || {};
+                const road = addr.road || addr.suburb || addr.neighbourhood || addr.residential || addr.amenity || item.name || "";
+                const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.state_district || "";
+                const postcode = addr.postcode || "";
+
+                externalMatches.push({
+                  title: road || item.display_name.split(",")[0],
+                  subtitle: item.display_name,
+                  lat: parseFloat(item.lat),
+                  lng: parseFloat(item.lon),
+                  street: road || item.display_name.split(",")[0],
+                  city: cityName,
+                  postcode: postcode,
+                  isHub: false
+                });
+              });
+            }
+
+            const combined = [...localMatches, ...externalMatches];
+            renderSearchResults(combined);
+          })
+          .catch(err => {
+            showMapLoading(false);
+            console.log("Manual search notice:", err);
+            if (localMatches.length > 0) {
+              renderSearchResults(localMatches);
+            }
+          });
+      }
+
+      // Event listener: Manual Search button click
+      if (btnRunManualSearch) {
+        btnRunManualSearch.addEventListener("click", executeManualSearch);
+      }
+
+      // Event listener: Input typing with debounce and keyboard shortcuts (Enter / Escape)
+      if (manualSearchInput) {
+        manualSearchInput.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            executeManualSearch();
+          } else if (e.key === "Escape") {
+            if (manualSearchResultsList) manualSearchResultsList.classList.add("d-none");
+          }
+        });
+
+        manualSearchInput.addEventListener("input", function () {
+          const val = manualSearchInput.value.trim();
+          if (clearManualSearchBtn) {
+            clearManualSearchBtn.classList.toggle("d-none", val.length === 0);
+          }
+          clearTimeout(manualSearchDebounceTimer);
+          if (val.length >= 3) {
+            manualSearchDebounceTimer = setTimeout(executeManualSearch, 450);
+          } else if (val.length === 0) {
+            if (manualSearchResultsList) manualSearchResultsList.classList.add("d-none");
+          }
+        });
+      }
+
+      // Event listener: Clear search input
+      if (clearManualSearchBtn) {
+        clearManualSearchBtn.addEventListener("click", function () {
+          if (manualSearchInput) {
+            manualSearchInput.value = "";
+            manualSearchInput.focus();
+          }
+          clearManualSearchBtn.classList.add("d-none");
+          if (manualSearchResultsList) {
+            manualSearchResultsList.classList.add("d-none");
+          }
+        });
+      }
+
+      // Event listener: Close dropdown on click outside
+      document.addEventListener("click", function (e) {
+        if (!manualSearchResultsList || manualSearchResultsList.classList.contains("d-none")) return;
+        const wrapper = document.getElementById("manualSearchWrapper");
+        if (wrapper && !wrapper.contains(e.target)) {
+          manualSearchResultsList.classList.add("d-none");
+        }
+      });
+    });
+  </script>
+{% endblock inline_javascript %}

@@ -1,0 +1,505 @@
+{% extends "base_citizen.html" %}
+
+{% block title %}Pickup Request Details | TrashPort{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-10 col-lg-8">
+
+    <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
+      <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+    </a>
+
+    <!-- Live Map & ETA HUD -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="mb-0 text-success fw-bold"><i class="fas fa-satellite me-2"></i>Live Collector Map &amp; Tracking</h4>
+          <span class="badge bg-primary px-3 py-2 fs-6" id="liveBadge"><i class="fas fa-satellite-dish me-1"></i> Tracking Live</span>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%); border-radius: 12px;">
+              <div class="small text-white-50 text-uppercase fw-bold">Live Distance</div>
+              <div class="fs-3 fw-bold mt-1" id="hudDistance">{{ pickup.distance_km }} km</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 shadow-sm text-white" style="background: linear-gradient(135deg, #0d3b66 0%, #0077b6 100%); border-radius: 12px;">
+              <div class="small text-white-50 text-uppercase fw-bold">Estimated Time of Arrival (ETA)</div>
+              <div class="fs-3 fw-bold mt-1" id="hudEta">Calculating...</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="trackingMap" class="shadow-sm" style="height: 420px; width: 100%; border-radius: 12px; border: 2px solid #0d6efd; position: relative; z-index: 1;"></div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <h2 class="mb-0 text-primary">Pickup Request #{{ pickup.display_id }}</h2>
+          <span class="fs-6 text-muted">Booked: {{ pickup.created_at|date:"M d, Y" }}</span>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6 border-end">
+            <h5 class="text-uppercase text-muted small fw-bold">Collection Details</h5>
+            <p class="mb-2"><strong>Category:</strong> {{ pickup.category.name }}</p>
+            <p class="mb-2"><strong>Estimated Weight:</strong> {{ pickup.weight_kg }} kg</p>
+            <p class="mb-2"><strong>Number of Package Boxes:</strong> {{ pickup.quantity_estimate|default:"-" }}</p>
+            <p class="mb-2"><strong>Scheduled Date/Time:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
+            <p class="mb-2">
+              <strong>Status:</strong>
+              {% if pickup.status == 'AWAITING_PAYMENT' %}
+                <span class="badge bg-danger">Awaiting Payment</span>
+              {% elif pickup.status == 'PENDING' %}
+                <span class="badge bg-warning text-dark">Pending Assignment</span>
+              {% elif pickup.status == 'ASSIGNED' %}
+                <span class="badge bg-primary">Assigned</span>
+              {% elif pickup.status == 'IN_TRANSIT' %}
+                <span class="badge bg-info">In Transit</span>
+              {% elif pickup.status == 'COMPLETED' %}
+                <span class="badge bg-success">Completed</span>
+              {% elif pickup.status == 'CANCELLED' %}
+                <span class="badge bg-danger">Cancelled</span>
+              {% endif %}
+            </p>
+            <p class="mb-2">
+              <strong>Collection Fee:</strong>
+              {% if pickup.fee > 0 %}
+                Rs. {{ pickup.fee }}
+              {% else %}
+                <span class="text-success fw-bold">Free</span>
+              {% endif %}
+            </p>
+            <p class="mb-2"><strong>Points Reward:</strong> {{ pickup.points_earned }} pts</p>
+            <p class="mb-2 d-flex align-items-center flex-wrap gap-2">
+              <strong>Payment Status:</strong>
+              {% if pickup.is_paid %}
+                <span class="badge bg-success">Paid</span>
+                <a href="{% url 'waste_management:payment_invoice' pickup.id %}" target="_blank" class="btn btn-sm btn-outline-success">
+                  <i class="fas fa-file-invoice me-1"></i> Download Tax Invoice
+                </a>
+              {% else %}
+                <span class="badge bg-danger">Unpaid</span>
+                {% if pickup.status == 'AWAITING_PAYMENT' %}
+                  <a href="{% url 'waste_management:payment_checkout' pickup.id %}" class="btn btn-sm btn-success fw-bold">
+                    <i class="fas fa-credit-card me-1"></i> Pay Rs. {{ pickup.fee }}
+                  </a>
+                {% endif %}
+              {% endif %}
+            </p>
+          </div>
+
+          <div class="col-md-6">
+            <h5 class="text-uppercase text-muted small fw-bold">Location & Collector</h5>
+            <p class="mb-2"><strong>Address:</strong><br>
+              {{ pickup.address.address_line1 }}<br>
+              {% if pickup.address.address_line2 %}{{ pickup.address.address_line2 }}<br>{% endif %}
+              {{ pickup.address.city }}, {{ pickup.address.state }} - {{ pickup.address.postal_code }}
+            </p>
+            <p class="mb-0"><strong>Assigned Collector:</strong><br>
+              {% if pickup.collector %}
+                {{ pickup.collector.name|default:pickup.collector.email }} ({{ pickup.collector.email }})
+              {% else %}
+                <span class="text-muted italic">Waiting for collector assignment</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cancellation Status & Refund Banner -->
+    {% if pickup.status == 'CANCELLED' %}
+      <div class="card border-0 shadow-sm mb-4 border-start border-danger border-4 bg-white">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-start gap-3">
+            <div class="rounded-circle bg-danger bg-opacity-10 text-danger p-3 fs-4">
+              <i class="fas fa-ban"></i>
+            </div>
+            <div class="flex-grow-1">
+              <h5 class="fw-bold text-danger mb-1">This Pickup Request is Cancelled</h5>
+              <p class="text-muted small mb-2">Cancelled on {{ pickup.cancelled_at|default:pickup.updated_at|date:"M d, Y \a\t h:i A" }}</p>
+              {% if pickup.cancellation_reason %}
+                <div class="p-3 bg-light rounded-3 border mb-3">
+                  <div class="small fw-bold text-dark mb-1"><i class="fas fa-quote-left me-2 text-muted"></i>Reason for Cancellation:</div>
+                  <div class="text-secondary small">{{ pickup.cancellation_reason }}</div>
+                </div>
+              {% endif %}
+
+              {% if pickup.is_paid %}
+                <div class="alert alert-warning d-flex align-items-center gap-2 mb-0 py-2 px-3 border border-warning" role="alert">
+                  <i class="fas fa-undo-alt fs-5 text-warning"></i>
+                  <div class="small">
+                    <strong>Payment Refund Notice:</strong> Since collection fee of <strong>Rs. {{ pickup.fee }}</strong> was already paid, your full refund has been initiated and will be credited to your original payment method within <strong>3 to 7 business days</strong>.
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Citizen Actions: Cancel or Locked Message -->
+    {% if pickup.status in 'PENDING AWAITING_PAYMENT' %}
+      {% if not pickup.collector %}
+        <div class="card border-0 shadow-sm mb-4 border-start border-warning border-4 bg-white">
+          <div class="card-body p-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+              <div>
+                <h5 class="fw-bold text-dark mb-1">Cancel this Pickup</h5>
+                <p class="text-muted small mb-0">You can cancel this request anytime before a collector is assigned. You will be asked to provide a reason.</p>
+                {% if pickup.is_paid %}
+                  <div class="small text-success fw-semibold mt-1">
+                    <i class="fas fa-shield-alt me-1"></i>Refund guarantee: 100% refund will be returned to your original payment method within 3 to 7 business days.
+                  </div>
+                {% endif %}
+              </div>
+              <button type="button" class="btn btn-outline-danger px-4" data-bs-toggle="modal" data-bs-target="#cancelPickupModal">
+                <i class="fas fa-times-circle me-1"></i>Cancel Request
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cancellation Modal -->
+        <div class="modal fade" id="cancelPickupModal" tabindex="-1" aria-labelledby="cancelPickupModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+              <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title fw-bold" id="cancelPickupModalLabel">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Cancel Pickup Request #{{ pickup.display_id }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="cancel">
+                <div class="modal-body p-4">
+                  <p class="text-muted mb-3">Please specify why you are cancelling this pickup request:</p>
+
+                  <div class="mb-3">
+                    <label for="cancelReasonPreset" class="form-label fw-bold small">Reason Category:*</label>
+                    <select class="form-select" id="cancelReasonPreset" onchange="handlePresetReasonChange(this)" required>
+                      <option value="" disabled selected>-- Select a reason --</option>
+                      <option value="Change of plans / No longer needed">Change of plans / No longer needed</option>
+                      <option value="Scheduled wrong date or time">Scheduled wrong date or time</option>
+                      <option value="Waste already disposed / cleared">Waste already disposed / cleared</option>
+                      <option value="Entered wrong location or address">Entered wrong location or address</option>
+                      <option value="Other">Other reason...</option>
+                    </select>
+                  </div>
+
+                  <div class="mb-3">
+                    <label for="cancellation_reason" class="form-label fw-bold small">Explanation / Details:*</label>
+                    <textarea name="cancellation_reason" id="cancellation_reason" class="form-control" rows="3" placeholder="Provide brief explanation for cancellation..." required></textarea>
+                  </div>
+
+                  {% if pickup.is_paid %}
+                    <div class="alert alert-info py-2 px-3 small mb-0 border">
+                      <i class="fas fa-info-circle me-1 text-primary"></i><strong>Payment Refund Notice:</strong> Your payment of <strong>Rs. {{ pickup.fee }}</strong> will be refunded to your original payment method within <strong>3 to 7 business days</strong> upon cancellation.
+                    </div>
+                  {% endif %}
+                </div>
+                <div class="modal-footer bg-light">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep Pickup</button>
+                  <button type="submit" class="btn btn-danger fw-bold px-4">Confirm Cancellation</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="alert alert-secondary d-flex align-items-center gap-3 p-3 mb-4 rounded-3 border">
+          <i class="fas fa-lock fs-4 text-primary"></i>
+          <div class="small">
+            <strong>Cancellation Locked:</strong> A waste collector (<strong>{{ pickup.collector.name|default:pickup.collector.email }}</strong>) has already been assigned to this pickup request and is preparing for collection. Pickups cannot be cancelled once assigned.
+          </div>
+        </div>
+      {% endif %}
+    {% elif pickup.status in 'ASSIGNED IN_TRANSIT' %}
+      <div class="alert alert-secondary d-flex align-items-center gap-3 p-3 mb-4 rounded-3 border">
+        <i class="fas fa-lock fs-4 text-primary"></i>
+        <div class="small">
+          <strong>Cancellation Locked:</strong> This pickup is currently in progress with collector <strong>{{ pickup.collector.name|default:pickup.collector.email }}</strong> and cannot be cancelled.
+        </div>
+      </div>
+    {% endif %}
+
+    {% if pickup.status == 'AWAITING_PAYMENT' and not pickup.is_paid %}
+      <div class="card border-0 shadow-sm mb-4 border-danger">
+        <div class="card-body">
+          <h5 class="card-title text-danger">Pending Payment Required</h5>
+          <p class="text-muted small">A collection fee of <strong>Rs. {{ pickup.fee }}</strong> is required for this collection request.</p>
+          <a href="{% url 'waste_management:payment_checkout' pickup.id %}" class="btn btn-success btn-lg">
+            <i class="fas fa-credit-card me-1"></i>Pay collection fee (Rs. {{ pickup.fee }})
+          </a>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if pickup.status == 'COMPLETED' %}
+      <!-- Feedback Form -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Feedback & Rating</h5>
+          {% if pickup.feedback_rating %}
+            <p class="mb-1"><strong>Your Rating:</strong> {{ pickup.feedback_rating }} / 5</p>
+            {% if pickup.feedback_comments %}
+              <p class="mb-0 text-muted">"{{ pickup.feedback_comments }}"</p>
+            {% endif %}
+          {% else %}
+            <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="feedback">
+              <div class="mb-3">
+                <label for="rating" class="form-label fw-bold">Rate service (1-5):</label>
+                <select name="rating" id="rating" class="form-select w-25" required>
+                  <option value="">-- Rate --</option>
+                  <option value="5">5 - Excellent</option>
+                  <option value="4">4 - Good</option>
+                  <option value="3">3 - Average</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="1">1 - Terrible</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="comments" class="form-label fw-bold">Comments (Optional):</label>
+                <textarea name="comments" id="comments" rows="3" class="form-control" placeholder="Tell us how we did..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Submit Feedback</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block inline_javascript %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Fix default Leaflet icon CDN URLs
+      delete L.Icon.Default.prototype._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+      });
+
+      const pickupId = "{{ pickup.id }}";
+      const pickupLat = parseFloat("{{ pickup.effective_latitude|stringformat:".6f" }}");
+      const pickupLng = parseFloat("{{ pickup.effective_longitude|stringformat:".6f" }}");
+
+      let streetLayer = L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      });
+
+      let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and GIS Community'
+      });
+
+      let baseMaps = {
+        "📍 Street Map (OSM)": streetLayer,
+        "🛰️ Satellite View": satelliteLayer
+      };
+
+      let map = L.map('trackingMap', {
+        center: [pickupLat, pickupLng],
+        zoom: 15,
+        layers: [streetLayer]
+      });
+
+      L.control.layers(baseMaps).addTo(map);
+
+      setTimeout(function () {
+        map.invalidateSize();
+      }, 300);
+
+      // Pickup Pin Marker
+      let pickupMarker = L.marker([pickupLat, pickupLng]).addTo(map)
+        .bindPopup("<b>📍 Pickup Location</b><br>{{ pickup.address.address_line1 }}").openPopup();
+
+      let collectorMarker = null;
+      let routePolyline = L.polyline([], {
+        color: '#2563eb',
+        weight: 6,
+        opacity: 0.85
+      }).addTo(map);
+
+      function updateTrackingUI(data) {
+        if (data.collector_location) {
+          const cLat = data.collector_location.latitude;
+          const cLng = data.collector_location.longitude;
+
+          if (!collectorMarker) {
+            collectorMarker = L.marker([cLat, cLng], {
+              title: "Collector Vehicle"
+            }).addTo(map);
+          } else {
+            collectorMarker.setLatLng([cLat, cLng]);
+          }
+          collectorMarker.bindPopup(`<b>🚚 Collector ${data.collector_location.name || 'En Route'}</b><br>Speed: ${data.collector_location.speed || 0} km/h`);
+
+          function generateClientRoadCurve(sLat, sLng, eLat, eLng) {
+            let pts = [];
+            let dLat = eLat - sLat;
+            let dLng = eLng - sLng;
+            let turn1Lat = sLat + dLat * 0.60 + (dLng * 0.12);
+            let turn1Lng = sLng + dLng * 0.20 - (dLat * 0.12);
+            let turn2Lat = sLat + dLat * 0.85 - (dLng * 0.08);
+            let turn2Lng = sLng + dLng * 0.75 + (dLat * 0.08);
+            let count = 16;
+            for (let i = 0; i <= count; i++) {
+              let t = i / count;
+              let lat, lng;
+              if (t < 0.5) {
+                let subT = t * 2.0;
+                lat = (1 - subT) * sLat + subT * turn1Lat;
+                lng = (1 - subT) * sLng + subT * turn1Lng;
+              } else if (t < 0.85) {
+                let subT = (t - 0.5) / 0.35;
+                lat = (1 - subT) * turn1Lat + subT * turn2Lat;
+                lng = (1 - subT) * turn1Lng + subT * turn2Lng;
+              } else {
+                let subT = (t - 0.85) / 0.15;
+                lat = (1 - subT) * turn2Lat + subT * eLat;
+                lng = (1 - subT) * turn2Lng + subT * eLng;
+              }
+              let wLat = Math.sin(t * Math.PI * 4) * (dLat * 0.02);
+              let wLng = Math.cos(t * Math.PI * 4) * (dLng * 0.02);
+              pts.push([lat + wLat, lng + wLng]);
+            }
+            return pts;
+          }
+
+          // Instantly set curved road waypoints before network request
+          routePolyline.setLatLngs(generateClientRoadCurve(cLat, cLng, pickupLat, pickupLng));
+
+          // Fetch OSRM Road Geometry
+          fetch(`/api/maps/route/?start_lat=${cLat}&start_lng=${cLng}&end_lat=${pickupLat}&end_lng=${pickupLng}`)
+            .then(res => res.json())
+            .then(routeData => {
+              let pts = (routeData && routeData.coordinates && routeData.coordinates.length > 2)
+                ? routeData.coordinates
+                : generateClientRoadCurve(cLat, cLng, pickupLat, pickupLng);
+              routePolyline.setLatLngs(pts);
+              if (routeData && routeData.distance_km !== undefined) {
+                document.getElementById('hudDistance').textContent = `${routeData.distance_km} km`;
+              }
+              if (routeData && routeData.duration_mins !== undefined) {
+                document.getElementById('hudEta').textContent = `${routeData.duration_mins} mins`;
+              }
+            })
+            .catch(err => {
+              routePolyline.setLatLngs(generateClientRoadCurve(cLat, cLng, pickupLat, pickupLng));
+            });
+
+          // Fit bounds smoothly on initial load without jarring repetitive re-centering
+          if (!boundsFitted) {
+            let bounds = L.latLngBounds([[pickupLat, pickupLng], [cLat, cLng]]);
+            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+            boundsFitted = true;
+          }
+        } else {
+          if (data.distance_km !== undefined) {
+            document.getElementById('hudDistance').textContent = `${data.distance_km} km`;
+          }
+          document.getElementById('hudEta').textContent = `Waiting for collector`;
+        }
+      }
+
+      let boundsFitted = false;
+      let lastFetchedLat = null;
+      let lastFetchedLng = null;
+      let isTrackingFetch = false;
+
+      function fetchLiveTracking() {
+        if (isTrackingFetch || document.hidden) return;
+        isTrackingFetch = true;
+        fetch(`/api/maps/tracking/${pickupId}/`)
+          .then(res => res.json())
+          .then(data => updateTrackingUI(data))
+          .catch(err => console.error("Tracking API error:", err))
+          .finally(() => {
+            isTrackingFetch = false;
+          });
+      }
+
+      let trackingInterval = null;
+      function startTrackingPoll() {
+        if (!trackingInterval) {
+          fetchLiveTracking();
+          trackingInterval = setInterval(fetchLiveTracking, 5000);
+        }
+      }
+      function stopTrackingPoll() {
+        if (trackingInterval) {
+          clearInterval(trackingInterval);
+          trackingInterval = null;
+        }
+      }
+
+      startTrackingPoll();
+
+      let trackingSocket = null;
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/maps/tracking/${pickupId}/`;
+      try {
+        trackingSocket = new WebSocket(wsUrl);
+        trackingSocket.onopen = function () {
+          // If WebSocket connects, slow down HTTP polling to save mobile battery
+          stopTrackingPoll();
+        };
+        trackingSocket.onmessage = function (e) {
+          const data = JSON.parse(e.data);
+          updateTrackingUI(data);
+        };
+        trackingSocket.onerror = function () {
+          startTrackingPoll();
+        };
+        trackingSocket.onclose = function () {
+          startTrackingPoll();
+        };
+      } catch (e) {
+        startTrackingPoll();
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          stopTrackingPoll();
+        } else if (!trackingSocket || trackingSocket.readyState !== WebSocket.OPEN) {
+          startTrackingPoll();
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        stopTrackingPoll();
+        if (trackingSocket) trackingSocket.close();
+        map.remove();
+      });
+    });
+
+    function handlePresetReasonChange(select) {
+      const textarea = document.getElementById("cancellation_reason");
+      if (!textarea) return;
+      if (select.value === "Other") {
+        textarea.value = "";
+        textarea.placeholder = "Please explain why you need to cancel this pickup...";
+        textarea.focus();
+      } else {
+        textarea.value = select.value;
+      }
+    }
+  </script>
+{% endblock inline_javascript %}
