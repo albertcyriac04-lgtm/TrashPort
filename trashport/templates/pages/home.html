@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrashPort - Intelligent Waste Logistics & Smart Collection</title>
+    <meta name="description" content="On-demand smart waste management: easy pickup scheduling, recycling rewards, and citizen hotline services.">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Fira Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['"Fira Code"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                        },
+                        accentBlue: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        },
+                        accentYellow: {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#d97706',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --spring: cubic-bezier(0.16, 1, 0.3, 1);
+            --bg-white: #ffffff;
+            --bg-light: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --text-dark: #0f172a;
+            --text-mid: #334155;
+            --text-muted: #64748b;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Fira Sans', -apple-system, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: var(--bg-white);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        /* Tactile button interaction */
+        .tactile {
+            transition: all 0.15s var(--spring);
+        }
+        .tactile:active { transform: scale(0.97); }
+
+        /* Custom Card Hover */
+        .feature-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all 0.25s var(--spring);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .feature-card:hover {
+            border-color: #059669;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -8px rgba(5, 150, 105, 0.12);
+        }
+
+        .blue-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all 0.25s var(--spring);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .blue-card:hover {
+            border-color: #2563eb;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -8px rgba(37, 99, 235, 0.12);
+        }
+
+        .yellow-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all 0.25s var(--spring);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .yellow-card:hover {
+            border-color: #d97706;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px -8px rgba(217, 119, 6, 0.12);
+        }
+
+        /* Hero Light Grid */
+        .bg-hero-grid {
+            background-image:
+                linear-gradient(rgba(5, 150, 105, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(5, 150, 105, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        ::selection { background: #d1fae5; color: #047857; }
+    </style>
+</head>
+
+<body>
+
+    <!-- TOP ANNOUNCEMENT BAR -->
+    <div class="bg-emerald-50 border-b border-emerald-200/60 py-2 px-4 text-center">
+        <div class="max-w-7xl mx-auto flex items-center justify-center gap-3 text-xs">
+            <span class="font-mono font-bold px-2 py-0.5 rounded bg-amber-400 text-slate-900 uppercase tracking-wider text-[10px]">NEW</span>
+            <span class="text-emerald-950 font-medium">Smart Waste Scheduling &amp; Green Reward Redemption System is Live!</span>
+            <a href="{% url 'about' %}" class="text-emerald-700 font-bold hover:underline">Learn details &rarr;</a>
+        </div>
+    </div>
+
+    <!-- HEADER / NAVIGATION -->
+    <header id="navbar" class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+
+            <!-- Logo -->
+            <a href="{% url 'home' %}" class="flex items-center gap-3 text-decoration-none">
+                <div class="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-lg font-bold text-slate-900 tracking-tight">TrashPort</span>
+                        <span class="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">ECO</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200">
+                <a href="#services" class="px-4 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white transition-all">Services</a>
+                <a href="#how-it-works" class="px-4 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white transition-all">How It Works</a>
+                <a href="{% url 'about' %}" class="px-4 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white transition-all">About</a>
+                <a href="#feedback-section" class="px-4 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-white transition-all">Hotline</a>
+            </nav>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-3">
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'waste_management:dashboard' %}" class="tactile inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-sm font-semibold hover:bg-emerald-100">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                        Dashboard
+                    </a>
+                    <form method="POST" action="{% url 'account_logout' %}" class="m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="tactile px-3 py-2 text-sm font-medium text-slate-500 hover:text-red-600">Sign Out</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'account_login' %}" class="tactile px-4 py-2 text-sm font-semibold text-slate-700 hover:text-slate-900">Sign In</a>
+                    <a href="{% url 'account_signup' %}" class="tactile inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 hover:bg-emerald-700">
+                        Get Started
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <section class="bg-hero-grid relative py-16 md:py-24 bg-gradient-to-b from-emerald-50/40 via-white to-white overflow-hidden">
+        <div class="max-w-4xl mx-auto text-center px-6 relative z-10">
+            <!-- Headline -->
+            <h1 class="text-4xl md:text-6xl font-black text-slate-900 leading-tight tracking-tight mb-6">
+                Clean cities start with <span class="text-emerald-600">intelligent waste</span> collection.
+            </h1>
+
+            <p class="text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto mb-8 font-normal">
+                Schedule household and commercial pickups on-demand, segregate recyclables for green reward points, and support sustainable municipal logistics.
+            </p>
+
+            <!-- Call To Action Buttons -->
+            <div class="flex flex-wrap items-center justify-center gap-4 mb-10">
+                {% if request.user.is_authenticated %}
+                    <a href="{% url 'waste_management:pickup_create' %}" class="tactile inline-flex items-center gap-2.5 px-6 py-3.5 bg-emerald-600 text-white rounded-xl text-base font-bold shadow-lg shadow-emerald-600/30 hover:bg-emerald-700">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Schedule Pickup Now
+                    </a>
+                    <a href="{% url 'waste_management:dashboard' %}" class="tactile inline-flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-xl text-base font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700">
+                        Open Dashboard
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </a>
+                {% else %}
+                    <a href="{% url 'account_signup' %}" class="tactile inline-flex items-center gap-2 px-7 py-3.5 bg-emerald-600 text-white rounded-xl text-base font-bold shadow-lg shadow-emerald-600/30 hover:bg-emerald-700">
+                        Get Started Free
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </a>
+                    <a href="{% url 'account_login' %}" class="tactile inline-flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-xl text-base font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700">
+                        Sign In to Account
+                    </a>
+                {% endif %}
+            </div>
+
+            <!-- Highlight Highlights -->
+            <div class="flex items-center justify-center gap-8 pt-6 border-t border-slate-200 text-sm font-semibold text-slate-700 flex-wrap">
+                <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <span>Verified Green Disposal</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                    <span>On-Demand Pickup</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
+                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                    </div>
+                    <span>Reward Credits</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES SECTION -->
+    <section id="services" class="py-20 bg-slate-50 border-t border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-6">
+
+            <!-- Section Header -->
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <span class="font-mono text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">CORE SERVICES</span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-4 mb-4 tracking-tight">
+                    Comprehensive Waste Management Solutions
+                </h2>
+                <p class="text-slate-600 text-base leading-relaxed">
+                    Designed for households, commercial spaces, and municipal operations to maintain cleaner, sustainable communities.
+                </p>
+            </div>
+
+            <!-- Services Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                <!-- Service 1 -->
+                <div class="feature-card p-8 bg-white">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-6">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    </div>
+                    <span class="font-mono text-xs font-bold text-emerald-700 uppercase tracking-wider">RESIDENTIAL</span>
+                    <h3 class="text-xl font-bold text-slate-900 mt-2 mb-3">Household Collection</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6">
+                        Convenient scheduled doorstep collection for dry waste, organic compostables, and recyclable household packaging.
+                    </p>
+                    <a href="{% url 'account_signup' %}" class="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-600 hover:text-emerald-700">
+                        Book Household Pickup &rarr;
+                    </a>
+                </div>
+
+                <!-- Service 2 -->
+                <div class="blue-card p-8 bg-white">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-700 flex items-center justify-center mb-6">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V10m0 0V4m0 6h4m-4 0H9"/></svg>
+                    </div>
+                    <span class="font-mono text-xs font-bold text-blue-700 uppercase tracking-wider">COMMERCIAL</span>
+                    <h3 class="text-xl font-bold text-slate-900 mt-2 mb-3">Bulk &amp; Business Logistics</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6">
+                        Tailored waste collection solutions for commercial complexes, restaurants, office spaces, and event venues.
+                    </p>
+                    <a href="{% url 'account_signup' %}" class="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-700">
+                        Explore Business Services &rarr;
+                    </a>
+                </div>
+
+                <!-- Service 3 -->
+                <div class="yellow-card p-8 bg-white">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mb-6">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <span class="font-mono text-xs font-bold text-amber-700 uppercase tracking-wider">SPECIALIZED</span>
+                    <h3 class="text-xl font-bold text-slate-900 mt-2 mb-3">E-Waste &amp; Hazardous Care</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6">
+                        Safe handling and specialized recycling for electronics, batteries, lamps, and hazardous residential materials.
+                    </p>
+                    <a href="{% url 'account_signup' %}" class="inline-flex items-center gap-1.5 text-sm font-bold text-amber-600 hover:text-amber-700">
+                        Schedule E-Waste Disposal &rarr;
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS SECTION -->
+    <section id="how-it-works" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+
+                <!-- Left Column: Visual Card -->
+                <div class="lg:col-span-5">
+                    <div class="rounded-3xl overflow-hidden border border-slate-200 shadow-xl relative bg-slate-900">
+                        <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                             alt="Eco Waste Logistics"
+                             class="w-full h-[420px] object-cover opacity-80">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent"></div>
+                        <div class="absolute bottom-6 left-6 right-6 p-6 rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold font-mono">
+                                        TP
+                                    </div>
+                                    <div>
+                                        <div class="text-sm font-bold text-slate-900">Smart Sorting Hub</div>
+                                        <div class="text-xs text-slate-500">Zero-Landfill Processing</div>
+                                    </div>
+                                </div>
+                                <span class="font-mono text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">ACTIVE</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: 3 Steps -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div>
+                        <span class="font-mono text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-300">SIMPLE STEPS</span>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-4 mb-4 tracking-tight">
+                            How TrashPort Works for You
+                        </h2>
+                        <p class="text-slate-600 text-base mb-8">
+                            A seamless three-step process connecting citizens directly to local collection crews.
+                        </p>
+                    </div>
+
+                    <!-- Step 1 -->
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white font-bold font-mono flex items-center justify-center shrink-0">
+                            1
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-1">Book Pickup Request</h3>
+                            <p class="text-sm text-slate-600 leading-relaxed">Submit your request online with waste classification and location pinning. Pick a convenient arrival window.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-blue-50/60 border border-blue-200">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 text-white font-bold font-mono flex items-center justify-center shrink-0">
+                            2
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-1">Collector Arrival &amp; Handover</h3>
+                            <p class="text-sm text-slate-600 leading-relaxed">Our assigned neighborhood collector arrives at your location to safely load and verify waste items.</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="flex items-start gap-4 p-5 rounded-2xl bg-amber-50/60 border border-amber-200">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500 text-white font-bold font-mono flex items-center justify-center shrink-0">
+                            3
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900 mb-1">Receive Green Reward Points</h3>
+                            <p class="text-sm text-slate-600 leading-relaxed">Earn wallet credits for recycling efforts which can be redeemed for community vouchers or discounts.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- CITIZEN HOTLINE / FEEDBACK SECTION -->
+    <section id="feedback-section" class="py-20 bg-slate-50 border-t border-slate-200">
+        <div class="max-w-3xl mx-auto px-6">
+
+            <div class="text-center mb-10">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100 border border-amber-300 mb-4">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    <span class="font-mono text-xs font-bold uppercase tracking-wider text-amber-900">ANONYMOUS CITIZEN HOTLINE</span>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-black text-slate-900 mb-3 tracking-tight">
+                    Direct Feedback to Municipal Team
+                </h2>
+                <p class="text-slate-600 text-base leading-relaxed">
+                    Have concerns about a delayed collection, service issue, or suggestion? Submit feedback directly to city administrators.
+                </p>
+            </div>
+
+            <!-- Feedback Card -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl">
+                <form id="anonymous-feedback-form">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block font-mono text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Category</label>
+                            <select id="feedback-category" name="category" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <option value="GENERAL">General Operational Feedback</option>
+                                <option value="COLLECTION_ISSUE">Collection / Driver Service Issue</option>
+                                <option value="SUGGESTION">Recycling Suggestion</option>
+                                <option value="WEBSITE_BUG">Software / Portal Bug Report</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-mono text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Subject / Location Ref</label>
+                            <input type="text" id="feedback-subject" name="subject" placeholder="e.g. Missed bin in Sector 4" class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block font-mono text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">Message Content <span class="text-red-500">*</span></label>
+                        <textarea id="feedback-message" name="message" rows="4" required placeholder="Describe your concern or feedback..." class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 text-sm font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none leading-relaxed"></textarea>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-4 flex-wrap">
+                        <div class="flex items-center gap-2 text-xs font-medium text-slate-500">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>Secure &amp; Anonymous Transmission</span>
+                        </div>
+                        <button type="submit" id="feedback-submit-btn" class="tactile inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 hover:bg-emerald-700">
+                            <span>Submit Feedback</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+
+        <!-- Response Modal -->
+        <div id="message-box" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+            <div class="bg-white border border-slate-200 rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <h3 id="msg-box-title" class="text-xl font-bold text-slate-900 mb-2">Transmission Received</h3>
+                <p id="msg-box-text" class="text-sm text-slate-600 mb-6 leading-relaxed">Your feedback has been securely transferred to the municipal team.</p>
+                <button id="close-msg-btn" class="tactile w-full py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold hover:bg-emerald-700">Close</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-12 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+
+                <!-- Logo & Info -->
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </div>
+                    <div>
+                        <span class="text-base font-bold text-slate-900">TrashPort System</span>
+                        <span class="text-xs text-slate-500 block">&copy; 2026 TrashPort Eco Operations. All rights reserved.</span>
+                    </div>
+                </div>
+
+                <!-- Footer Links -->
+                <div class="flex items-center gap-6 text-sm font-semibold text-slate-600">
+                    <a href="#services" class="hover:text-emerald-600">Services</a>
+                    <a href="#how-it-works" class="hover:text-emerald-600">How It Works</a>
+                    <a href="{% url 'about' %}" class="hover:text-emerald-600">About</a>
+                    <a href="#feedback-section" class="hover:text-emerald-600">Hotline</a>
+                </div>
+
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Feedback form handler
+            const feedbackForm = document.getElementById('anonymous-feedback-form');
+            const submitBtn = document.getElementById('feedback-submit-btn');
+            const msgBox = document.getElementById('message-box');
+            const msgTitle = document.getElementById('msg-box-title');
+            const msgText = document.getElementById('msg-box-text');
+            const closeBtn = document.getElementById('close-msg-btn');
+
+            const showMsg = (title, text) => {
+                if (msgTitle) msgTitle.textContent = title;
+                if (msgText) msgText.textContent = text;
+                if (msgBox) {
+                    msgBox.classList.remove('hidden');
+                    msgBox.classList.add('flex');
+                }
+            };
+
+            const hideMsg = () => {
+                if (msgBox) {
+                    msgBox.classList.remove('flex');
+                    msgBox.classList.add('hidden');
+                }
+            };
+
+            if (feedbackForm) {
+                feedbackForm.addEventListener('submit', async e => {
+                    e.preventDefault();
+                    const category = document.getElementById('feedback-category').value;
+                    const subject = document.getElementById('feedback-subject').value;
+                    const message = document.getElementById('feedback-message').value;
+                    const csrf = feedbackForm.querySelector('[name=csrfmiddlewaretoken]')?.value;
+
+                    if (!message.trim()) { alert('Please enter your feedback message.'); return; }
+
+                    const origText = submitBtn.innerHTML;
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span>Submitting...</span>';
+
+                    try {
+                        const res = await fetch("{% url 'waste_management:submit_anonymous_feedback' %}", {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+                            body: JSON.stringify({ category, subject, message })
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.status === 'success') {
+                            showMsg('Submission Delivered', data.message || 'Your report has been securely logged.');
+                            feedbackForm.reset();
+                        } else {
+                            showMsg('Submission Error', data.message || 'Could not submit. Please retry.');
+                        }
+                    } catch {
+                        showMsg('Network Error', 'Could not reach server. Please check connection.');
+                    } finally {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = origText;
+                    }
+                });
+            }
+
+            if (closeBtn) closeBtn.addEventListener('click', hideMsg);
+            if (msgBox) msgBox.addEventListener('click', e => { if (e.target === msgBox) hideMsg(); });
+        });
+    </script>
+
+</body>
+</html>

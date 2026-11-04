@@ -1,0 +1,35 @@
+{# TrashPort Verified Email Required Notice Template #}
+{# Extends base.html (Bootstrap 5 + Lucent Design System) #}
+{# Modules used: django.utils.translation (i18n), allauth.account.templatetags.account #}
+{% extends "base.html" %}
+{% load i18n %}
+{% load account %}
+
+{% block title %}{% translate "Verify Your Email" %} | TrashPort{% endblock title %}
+
+{% block content %}
+<!-- Centered container for email verification required notice -->
+<div class="row justify-content-center py-4">
+  <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+    <!-- Lucent card with emerald accent bar -->
+    <div class="card lucent-card border-0 shadow-lg p-4 p-sm-5 text-center position-relative overflow-hidden">
+      <!-- Top accent gradient bar -->
+      <div class="position-absolute top-0 start-0 end-0" style="height: 4px; background: linear-gradient(90deg, #10b981 0%, #059669 100%);"></div>
+
+      <div class="d-inline-flex align-items-center justify-center rounded-circle bg-warning-subtle text-warning-emphasis mb-3 mx-auto" style="width: 64px; height: 64px;">
+        <i class="bi bi-shield-exclamation fs-2"></i>
+      </div>
+
+      <h2 class="fw-bold text-dark mb-2">{% translate "Verify Your Email Address" %}</h2>
+      <p class="text-muted small mb-4">
+        {% blocktranslate %}This part of our site requires us to verify that you are the owner of your email address. We have sent you an email with a verification link.{% endblocktranslate %}
+      </p>
+
+      <!-- Solid Black action button -->
+      <a href="{% url 'account_email' %}" class="btn btn-dark w-100 py-2.5 fw-bold rounded-3 shadow-sm" style="background-color: #000000 !important; border-color: #000000 !important; color: #ffffff !important;">
+        <i class="bi bi-envelope-check me-1"></i>{% translate "Manage Email Addresses / Resend" %}
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock content %}
