@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Pickup Request Details | TrashPort Admin{% endblock %}
+
+{% block content %}
+<div class="py-4 row justify-content-center">
+  <div class="col-md-10 col-lg-8">
+
+    <a href="{% url 'waste_management:dashboard' %}" class="btn btn-sm btn-outline-secondary mb-3">
+      <i class="bi bi-arrow-left me-1"></i>Back to Dashboard
+    </a>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+          <div>
+            <h2 class="mb-0 text-primary fw-bold">Pickup Request #{{ pickup.id }}</h2>
+            <span class="fs-6 text-muted">Booked: {{ pickup.created_at|date:"M d, Y" }} | Distance: <strong>{{ pickup.distance_km }} km</strong></span>
+          </div>
+          <div>
+            {% if pickup.status == 'AWAITING_PAYMENT' %}
+              <span class="badge bg-danger p-2 fs-6">Awaiting Payment</span>
+            {% elif pickup.status == 'PENDING' %}
+              <span class="badge bg-warning text-dark p-2 fs-6">Pending Assignment</span>
+            {% elif pickup.status == 'ASSIGNED' %}
+              <span class="badge bg-primary p-2 fs-6">Assigned</span>
+            {% elif pickup.status == 'IN_TRANSIT' %}
+              <span class="badge bg-info p-2 fs-6">In Transit</span>
+            {% elif pickup.status == 'COMPLETED' %}
+              <span class="badge bg-success p-2 fs-6">Completed</span>
+            {% elif pickup.status == 'CANCELLED' %}
+              <span class="badge bg-danger p-2 fs-6">Cancelled</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6 border-end">
+            <h5 class="text-uppercase text-muted small fw-bold">Collection Details</h5>
+            <p class="mb-2"><strong>Category:</strong> {{ pickup.category.name }} (Fee: Rs. {{ pickup.category.fee_per_kg }}/kg, Reward: {{ pickup.category.points_per_kg }} pts/kg)</p>
+            <p class="mb-2"><strong>Estimated Weight (Customer):</strong> {{ pickup.weight_kg }} kg</p>
+
+            {% if pickup.is_weight_verified %}
+              <div class="p-2 bg-success-subtle border border-success-subtle rounded my-2">
+                <div class="fw-bold text-success"><i class="bi bi-patch-check-fill me-1"></i> Verified Actual Weight: {{ pickup.actual_weight_kg }} kg</div>
+                {% if pickup.extra_fee > 0 %}
+                  <div class="text-danger small mt-1">Extra Weight Surcharge (2x rate): +Rs. {{ pickup.extra_fee }}</div>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            <p class="mb-2"><strong>Number of Package Boxes:</strong> {{ pickup.quantity_estimate|default:"-" }}</p>
+            <p class="mb-2"><strong>Scheduled Date/Time:</strong> {{ pickup.schedule_date|date:"M d, Y h:i A" }}</p>
+            <p class="mb-2">
+              <strong>Total Customer Fee:</strong>
+              {% if pickup.fee > 0 %}
+                <span class="fw-bold text-dark fs-5">Rs. {{ pickup.fee }}</span>
+              {% else %}
+                <span class="text-success fw-bold">Free (Subscribed)</span>
+              {% endif %}
+            </p>
+            <p class="mb-2"><strong>Points Reward:</strong> {{ pickup.points_earned }} pts</p>
+
+            <div class="p-3 bg-light rounded-3 mt-3 border">
+              <h6 class="fw-bold text-success mb-1"><i class="bi bi-cash-stack me-1"></i> Collector Money Sent / Payout</h6>
+              <div class="fs-5 fw-bold text-success">Rs. {{ pickup.collector_earnings }}</div>
+              <small class="text-muted d-block">Formula: Rs. {{ payout_settings.base_min_payout|default:"25.00" }} base min + Rs. {{ payout_settings.rate_per_km|default:"2.00" }}/km for {{ pickup.distance_km }} km + {{ payout_settings.extra_weight_commission_percent|default:"20.00" }}% extra weight commission</small>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <h5 class="text-uppercase text-muted small fw-bold">Location & Collector</h5>
+            <p class="mb-2"><strong>Customer:</strong> {{ pickup.citizen.name|default:pickup.citizen.email }} ({{ pickup.citizen.email }})</p>
+            <p class="mb-2"><strong>Address:</strong><br>
+              {{ pickup.address.address_line1 }}<br>
+              {% if pickup.address.address_line2 %}{{ pickup.address.address_line2 }}<br>{% endif %}
+              {{ pickup.address.city }}, {{ pickup.address.state }} - {{ pickup.address.postal_code }}
+            </p>
+            <p class="mb-0"><strong>Assigned Collector:</strong><br>
+              {% if pickup.collector %}
+                <span class="fw-bold text-primary">{{ pickup.collector.name|default:pickup.collector.email }}</span> ({{ pickup.collector.email }})
+              {% else %}
+                <span class="text-muted italic">Waiting for collector assignment</span>
+              {% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Administrator Actions -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Administrator Actions</h5>
+
+        {% if pickup.status == 'PENDING' or pickup.status == 'ASSIGNED' %}
+          <p class="text-muted small">Assign this request manually to a registered collector.</p>
+          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" class="row g-2 align-items-center">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="assign">
+            <div class="col-sm-8">
+              <select name="collector" class="form-select">
+                <option value="">-- Choose Collector --</option>
+                {% for col in collectors %}
+                  <option value="{{ col.id }}" {% if pickup.collector == col %}selected{% endif %}>
+                    {{ col.name|default:col.email }} ({{ col.email }})
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-sm-4">
+              <button type="submit" class="btn btn-primary w-100">Assign Collector</button>
+            </div>
+          </form>
+        {% endif %}
+
+        {% if pickup.status != 'CANCELLED' and pickup.status != 'COMPLETED' %}
+          <form method="post" action="{% url 'waste_management:pickup_status_update' pickup.id %}" class="mt-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="cancel">
+            <button type="submit" class="btn btn-danger btn-sm">Force Cancel Pickup</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

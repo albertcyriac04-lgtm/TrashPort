@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}{% if editing %}Edit Collector{% else %}Register Collector{% endif %} | TrashPort Admin{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 py-3">
+          <h1 class="h4 card-title mb-0 fw-bold">{% if editing %}Edit Collector Account{% else %}Register New Collector Account{% endif %}</h1>
+          <p class="text-muted small mb-0">Manage collector credentials, registered hub, and vehicle capacity.</p>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+            {% for hidden in form.hidden_fields %}
+              {{ hidden }}
+              {% if hidden.errors %}<div class="alert alert-danger" role="alert">{{ hidden.label }}: {{ hidden.errors }}</div>{% endif %}
+            {% endfor %}
+            <div class="row g-3 mb-4">
+              {% for field in form.visible_fields %}
+                <div class="col-12 col-md-6 collector-field">
+                  <label for="{{ field.id_for_label }}" class="form-label fw-semibold">{{ field.label }}{% if field.field.required %} <span class="text-danger" aria-hidden="true">*</span><span class="visually-hidden"> (required)</span>{% endif %}</label>
+                  {{ field }}
+                  {% if field.name == 'capacity_kg' %}
+                    <div class="form-text">Vehicle payload capacity in kilograms (kg).</div>
+                  {% elif field.name == 'max_capacity' %}
+                    <div class="form-text">Maximum pickup count per trip, not kilograms.</div>
+                  {% endif %}
+                  {% if field.help_text %}<div class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>{% endif %}
+                  {% if field.errors %}<div class="text-danger small mt-1" role="alert" id="{{ field.auto_id }}_error">{{ field.errors }}</div>{% endif %}
+                </div>
+              {% endfor %}
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-end gap-2">
+              <a href="{% url 'waste_management:user_list' %}" class="btn btn-outline-secondary">Cancel</a>
+              <button type="submit" class="btn btn-primary">{% if editing %}Save Collector Changes{% else %}Create Collector Account{% endif %}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+  .collector-field input:not([type="checkbox"]):not([type="radio"]),
+  .collector-field select, .collector-field textarea {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-height: 2.5rem;
+    padding: .375rem .75rem;
+    border: 1px solid #767676;
+    border-radius: .375rem;
+  }
+</style>
+{% endblock %}

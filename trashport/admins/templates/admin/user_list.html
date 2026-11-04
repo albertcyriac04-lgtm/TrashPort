@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block title %}User Management | TrashPort Admin{% endblock %}
+
+{% block content %}
+<div class="py-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 pb-3 border-bottom">
+    <div>
+      <h1 class="h2 mb-1 text-dark fw-bold">User Administration Directory</h1>
+      <p class="text-muted mb-0">Manage registered citizens, collectors, verification approvals, and account balances</p>
+    </div>
+    <div class="mt-3 mt-md-0 d-flex gap-2">
+      <a href="{% url 'waste_management:collector_create' %}" class="btn btn-primary shadow-sm">
+        <i class="bi bi-person-plus me-1"></i> Register New Collector
+      </a>
+    </div>
+  </div>
+
+  <!-- Pending Verification Alert Badge -->
+  {% if pending_collectors_count > 0 %}
+    <div class="alert alert-warning border-0 shadow-sm rounded-3 d-flex align-items-center justify-content-between mb-4 py-3 px-4">
+      <div class="d-flex align-items-center gap-3">
+        <div class="p-2 bg-warning-subtle text-warning-emphasis rounded-circle">
+          <i class="bi bi-shield-exclamation fs-4"></i>
+        </div>
+        <div>
+          <h6 class="mb-0 fw-bold text-dark">{{ pending_collectors_count }} Collector{% if pending_collectors_count > 1 %}s{% endif %} Awaiting Verification</h6>
+          <small class="text-muted">Review and verify collector accounts before they can claim collection pickups.</small>
+        </div>
+      </div>
+      <a href="{% url 'waste_management:user_list' %}?role=COLLECTOR&verification=PENDING" class="btn btn-warning btn-sm fw-bold px-3">
+        Review Pending
+      </a>
+    </div>
+  {% endif %}
+
+  <!-- Quick Filter Pills -->
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{% url 'waste_management:user_list' %}" class="btn btn-sm {% if not selected_role and not selected_is_verified and not selected_verification and not selected_hub %}btn-dark{% else %}btn-outline-secondary{% endif %} rounded-pill">
+      All Users ({{ users_list|length }})
+    </a>
+    <a href="{% url 'waste_management:user_list' %}?role=COLLECTOR" class="btn btn-sm {% if selected_role == 'COLLECTOR' and not selected_is_verified %}btn-primary{% else %}btn-outline-primary{% endif %} rounded-pill">
+      Collectors
+    </a>
+    <a href="{% url 'waste_management:user_list' %}?role=COLLECTOR&is_verified=true" class="btn btn-sm {% if selected_role == 'COLLECTOR' and selected_is_verified == 'true' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill">
+      <i class="bi bi-patch-check-fill me-1"></i> Verified Collectors ({{ verified_collectors_count }})
+    </a>
+    <a href="{% url 'waste_management:user_list' %}?role=COLLECTOR&is_verified=false" class="btn btn-sm {% if selected_role == 'COLLECTOR' and selected_is_verified == 'false' %}btn-danger{% else %}btn-outline-danger{% endif %} rounded-pill">
+      <i class="bi bi-clock-history me-1"></i> Unverified Collectors ({{ unverified_collectors_count }})
+    </a>
+    <a href="{% url 'waste_management:user_list' %}?role=CITIZEN" class="btn btn-sm {% if selected_role == 'CITIZEN' %}btn-success{% else %}btn-outline-success{% endif %} rounded-pill">
+      <i class="bi bi-people-fill me-1"></i> Citizens ({{ total_citizens_count }})
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+      <div class="d-flex align-items-center gap-2">
+        <h5 class="card-title mb-0 fw-bold">System Users</h5>
+        <span class="badge bg-light text-secondary border">{{ users_list|length }} accounts</span>
+      </div>
+
+      <form method="get" class="d-flex flex-wrap gap-2 align-items-center">
+        <!-- Role filter -->
+        <select name="role" class="form-select form-select-sm" style="width: 130px;" onchange="this.form.submit()">
+          <option value="">All Roles</option>
+          {% for val, label in role_choices %}
+            <option value="{{ val }}" {% if selected_role == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+
+        <!-- Verification Status filter -->
+        <select name="verification" class="form-select form-select-sm" style="width: 150px;" onchange="this.form.submit()">
+          <option value="">All Statuses</option>
+          {% for val, label in verification_choices %}
+            <option value="{{ val }}" {% if selected_verification == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+
+        <!-- Is Verified Check filter -->
+        <select name="is_verified" class="form-select form-select-sm" style="width: 140px;" onchange="this.form.submit()">
+          <option value="">Verified State</option>
+          <option value="true" {% if selected_is_verified == 'true' %}selected{% endif %}>Verified Only</option>
+          <option value="false" {% if selected_is_verified == 'false' %}selected{% endif %}>Unverified Only</option>
+        </select>
+
+        <label for="collectorHubFilter" class="visually-hidden">Registered collector hub</label>
+        <select id="collectorHubFilter" name="hub" class="form-select form-select-sm" style="width: 180px;" onchange="this.form.submit()">
+          <option value="">All Hubs</option>
+          <option value="unassigned" {% if selected_hub == 'unassigned' %}selected{% endif %}>Unassigned Collectors</option>
+          {% for hub in hubs %}
+            <option value="{{ hub.pk }}" {% if selected_hub == hub.pk|stringformat:'s' %}selected{% endif %}>{{ hub.name }}</option>
+          {% endfor %}
+        </select>
+
+        <!-- Sorting -->
+        <select name="sort" class="form-select form-select-sm" style="width: 150px;" onchange="this.form.submit()">
+          <option value="">Sort: Joined (Newest)</option>
+          <option value="verified_first" {% if selected_sort == 'verified_first' %}selected{% endif %}>Verified First</option>
+          <option value="unverified_first" {% if selected_sort == 'unverified_first' %}selected{% endif %}>Unverified First</option>
+          <option value="name" {% if selected_sort == 'name' %}selected{% endif %}>Sort: Name</option>
+        </select>
+
+        <div class="input-group input-group-sm" style="width: 180px;">
+          <input type="text" name="q" class="form-control" placeholder="Search..." value="{{ search_query }}">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+        </div>
+
+        {% if selected_role or selected_verification or selected_is_verified or selected_sort or selected_hub or search_query %}
+          <a href="{% url 'waste_management:user_list' %}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        {% endif %}
+      </form>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle mb-0 table-hover">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">User Email</th>
+            <th>Full Name</th>
+            <th>Role</th>
+            <th>Verification</th>
+            <th>Wallet / Balance</th>
+            <th>Status</th>
+            <th>Date Joined</th>
+            <th class="pe-3 text-end">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users_list %}
+            <tr>
+              <td class="ps-3 fw-bold text-dark">{{ u.email }}</td>
+              <td>{{ u.name|default:"&mdash;" }}</td>
+              <td>
+                {% if u.role == 'ADMIN' %}
+                  <span class="badge bg-danger">Administrator</span>
+                {% elif u.role == 'COLLECTOR' %}
+                  <span class="badge bg-primary">Collector</span>
+                  <div class="small mt-2"><strong>Hub:</strong> {{ u.collector_profile.hub.name|default:"Unassigned" }}</div>
+                  {% for vehicle in u.assigned_vehicles.all %}
+                    <div class="small mt-1">
+                      <strong>{{ vehicle.vehicle_number }}</strong> &middot; {{ vehicle.vehicle_type|default:"Type not specified" }}
+                      <span class="d-block text-muted">Payload: {{ vehicle.capacity_kg }} kg &middot; {{ vehicle.max_capacity }} pickups / trip</span>
+                    </div>
+                  {% empty %}
+                    <div class="small text-muted">No assigned vehicle</div>
+                  {% endfor %}
+                {% else %}
+                  <span class="badge bg-success">Citizen</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if u.role == 'COLLECTOR' %}
+                  {% if u.verification_status == 'APPROVED' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle d-inline-flex align-items-center gap-1">
+                      <i class="bi bi-patch-check-fill"></i> Verified
+                    </span>
+                  {% elif u.verification_status == 'REJECTED' %}
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle d-inline-flex align-items-center gap-1">
+                      <i class="bi bi-x-circle-fill"></i> Rejected
+                    </span>
+                  {% else %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle d-inline-flex align-items-center gap-1">
+                      <i class="bi bi-clock-history"></i> Pending Approval
+                    </span>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted small">&mdash;</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if u.role == 'COLLECTOR' %}
+                  <span class="fw-bold text-success"><i class="bi bi-wallet2 me-1"></i>Rs. {{ u.wallet_balance|default:"0.00" }}</span>
+                {% else %}
+                  <span class="fw-semibold text-warning"><i class="bi bi-star-fill me-1"></i>{{ u.wallet_points }} pts</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if u.is_active %}
+                  <span class="badge bg-success-subtle text-success border">Active</span>
+                {% else %}
+                  <span class="badge bg-danger-subtle text-danger border">Suspended</span>
+                {% endif %}
+              </td>
+              <td>{{ u.date_joined|date:"M d, Y" }}</td>
+              <td class="pe-3 text-end">
+                <div class="d-inline-flex gap-1 align-items-center">
+                  {% if u.role == 'COLLECTOR' and u.verification_status == 'PENDING' %}
+                    <!-- Quick Approve Button -->
+                    <form method="post" action="{% url 'waste_management:collector_verify' u.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="approve">
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="btn btn-sm btn-success py-1 px-2" title="Approve Collector">
+                        <i class="bi bi-check-lg me-1"></i> Approve
+                      </button>
+                    </form>
+                    <!-- Quick Reject Button -->
+                    <form method="post" action="{% url 'waste_management:collector_verify' u.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <input type="hidden" name="action" value="reject">
+                      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Reject Collector">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </form>
+                  {% endif %}
+                  <a href="{% url 'waste_management:user_detail' u.id %}" class="btn btn-sm btn-outline-secondary py-1 px-2">Details</a>
+                  {% if u.role == 'COLLECTOR' %}
+                    <a href="{% url 'waste_management:collector_update' pk=u.pk %}" class="btn btn-sm btn-outline-primary py-1 px-2">Edit Collector</a>
+                  {% endif %}
+                  {% if u.id != request.user.id %}
+                    <button type="button"
+                            class="btn btn-sm btn-outline-danger py-1 px-2"
+                            title="Delete User Account"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteUserModal"
+                            data-user-id="{{ u.id }}"
+                            data-user-email="{{ u.email }}"
+                            data-user-name="{{ u.name|default:u.email }}"
+                            data-user-role="{{ u.role }}">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  {% else %}
+                    <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="You cannot delete your own account">
+                      <button class="btn btn-sm btn-outline-secondary py-1 px-2" disabled>
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" class="text-center py-4 text-muted">No users found matching current query filters.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Reusable Delete User Confirmation Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title fs-5" id="deleteUserModalLabel">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Permanently Delete User Account
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="deleteUserForm" method="post" action="">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <p class="mb-2">
+            Are you sure you want to permanently delete user <strong id="modalUserEmail" class="text-danger"></strong>?
+          </p>
+          <div class="p-2 mb-3 bg-light rounded border small">
+            <div><strong>Name:</strong> <span id="modalUserName">--</span></div>
+            <div><strong>Role:</strong> <span id="modalUserRole" class="badge bg-secondary">--</span></div>
+          </div>
+          <div class="alert alert-warning py-2 px-3 small mb-0">
+            <div class="fw-bold mb-1"><i class="bi bi-shield-exclamation me-1"></i>Security &amp; Operational Safeguards:</div>
+            <ul class="mb-0 ps-3">
+              <li>This action is <strong>permanent</strong> and cannot be undone.</li>
+              <li>Collector or Citizen accounts with <strong>active in-progress pickups</strong> cannot be deleted until those trips are completed or reassigned.</li>
+              <li>Associated address entries and profiles will be cleaned up.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger fw-bold">
+            <i class="bi bi-trash me-1"></i> Confirm &amp; Delete User
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const deleteModal = document.getElementById('deleteUserModal');
+  if (deleteModal) {
+    deleteModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      if (!button) return;
+
+      const userId = button.getAttribute('data-user-id');
+      const userEmail = button.getAttribute('data-user-email');
+      const userName = button.getAttribute('data-user-name');
+      const userRole = button.getAttribute('data-user-role');
+
+      document.getElementById('modalUserEmail').textContent = userEmail;
+      document.getElementById('modalUserName').textContent = userName;
+      document.getElementById('modalUserRole').textContent = userRole;
+
+      const form = document.getElementById('deleteUserForm');
+      form.action = `/manage/users/${userId}/delete/`;
+    });
+  }
+});
+</script>
+{% endblock %}
+
